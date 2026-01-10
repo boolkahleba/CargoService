@@ -1,0 +1,264 @@
+{% extends 'cargo/base.html' %}
+
+{% block title %}Отслеживание заказа #{{ order.id }} - CargoService{% endblock %}
+
+{% block extra_css %}
+<style>
+    #map-container {
+        height: 500px;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+    .tracking-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .status-badge {
+        font-size: 1rem;
+        padding: 8px 16px;
+    }
+    .info-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="bi bi-map"></i> Отслеживание заказа #{{ order.id }}
+    </h1>
+    <a href="{% url 'sender_order_detail' order.id %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> К деталям заказа
+    </a>
+</div>
+
+<!-- Статус доставки -->
+<div class="tracking-info">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h4 class="mb-2">
+                {% if order.status == 'assigned' %}
+                    <span class="badge bg-info status-badge">Готов к отправке</span>
+                {% elif order.status == 'in_transit' %}
+                    <span class="badge bg-primary status-badge">В пути</span>
+                {% elif order.status == 'delivered' %}
+                    <span class="badge bg-success status-badge">Доставлен</span>
+                {% endif %}
+            </h4>
+            <p class="mb-0">
+                <i class="bi bi-truck"></i>
+                {% if order.transporter %}
+                    Перевозчик: {{ order.transporter.name }}
+                {% else %}
+                    Перевозчик не назначен
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <div class="text-muted small">Обновлено: {% now "H:i" %}</div>
+            <button id="refresh-btn" class="btn btn-sm btn-outline-primary mt-2">
+                <i class="bi bi-arrow-clockwise"></i> Обновить
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Карта -->
+<div id="map-container">
+    <div style="display: flex; justify-content: center; align-items: center; height: 100%; background: #f8f9fa;">
+        <div class="text-center">
+            <i class="bi bi-map display-1 text-muted"></i>
+            <h4 class="mt-3">Карта отслеживания</h4>
+            <p class="text-muted">Здесь будет отображаться маршрут и текущее местоположение</p>
+            <div class="mt-3">
+                <div class="info-card d-inline-block me-3">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-geo-alt text-primary me-2"></i>
+                        <div>
+                            <div class="small text-muted">Отправление</div>
+                            <div>{{ order.address_departure|truncatechars:30 }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-card d-inline-block">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-geo-alt-fill text-success me-2"></i>
+                        <div>
+                            <div class="small text-muted">Назначение</div>
+                            <div>{{ order.address_arrival|truncatechars:30 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button class="btn btn-primary" disabled>
+                    <i class="bi bi-play-circle"></i> Запустить симуляцию движения
+                </button>
+                <p class="small text-muted mt-2">Для демонстрации работы отслеживания</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Информация о доставке -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Прогноз доставки</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Пройдено:</span>
+                        <span><strong>0%</strong></span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar" role="progressbar" style="width: 0%;"></div>
+                    </div>
+                </div>
+                
+                <table class="table table-sm">
+                    <tr>
+                        <td>Плановое время отправления:</td>
+                        <td>{{ order.date_departure_plan|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td>Плановое время доставки:</td>
+                        <td>{{ order.date_arrival_plan|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td>Оставшееся время:</td>
+                        <td><strong>Рассчитывается...</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Оставшееся расстояние:</td>
+                        <td><strong>—</strong></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">История перемещений</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item active">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <strong>Заказ создан</strong>
+                            <p class="text-muted small">{{ order.date_create|date:"d.m.Y H:i" }}</p>
+                            <p class="small">Отправитель: {{ order.sender.name }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if order.transporter %}
+                    <div class="timeline-item {% if order.status != 'searching' %}active{% endif %}">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <strong>Назначен перевозчик</strong>
+                            <p class="text-muted small">Сегодня, 10:30</p>
+                            <p class="small">{{ order.transporter.name }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if order.status == 'in_transit' or order.status == 'delivered' %}
+                    <div class="timeline-item active">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <strong>Погрузка завершена</strong>
+                            <p class="text-muted small">Сегодня, 11:45</p>
+                            <p class="small">Транспорт отправился в путь</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if order.status == 'delivered' %}
+                    <div class="timeline-item active">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <strong>Доставлен</strong>
+                            <p class="text-muted small">{{ order.date_arrival_fact|date:"d.m.Y H:i" }}</p>
+                            <p class="small">Груз получен получателем</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                
+                {% if order.status == 'in_transit' %}
+                <div class="text-center mt-3">
+                    <button class="btn btn-sm btn-outline-primary" id="simulate-movement">
+                        <i class="bi bi-play"></i> Симулировать движение
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Кнопка подбора перевозчиков (если заказ еще в поиске) -->
+{% if order.status == 'searching' %}
+<div class="card mt-4">
+    <div class="card-body text-center">
+        <h5 class="mb-3">Заказ ищет перевозчика</h5>
+        <p class="text-muted mb-4">Мы подбираем подходящих перевозчиков по вашему маршруту и параметрам груза</p>
+        <a href="{% url 'sender_order_match' order.id %}" class="btn btn-primary btn-lg">
+            <i class="bi bi-search"></i> Посмотреть подобранных перевозчиков
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Кнопка обновления
+        const refreshBtn = document.getElementById('refresh-btn');
+        refreshBtn.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            icon.classList.add('spin');
+            
+            // Имитация обновления
+            setTimeout(() => {
+                icon.classList.remove('spin');
+                alert('Данные обновлены!');
+            }, 1000);
+        });
+        
+        // Симуляция движения
+        const simulateBtn = document.getElementById('simulate-movement');
+        if (simulateBtn) {
+            simulateBtn.addEventListener('click', function() {
+                const progressBar = document.querySelector('.progress-bar');
+                let progress = 0;
+                
+                const interval = setInterval(() => {
+                    progress += 5;
+                    progressBar.style.width = progress + '%';
+                    progressBar.textContent = progress + '%';
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        alert('Доставка завершена!');
+                    }
+                }, 500);
+            });
+        }
+    });
+</script>
+{% endblock %}

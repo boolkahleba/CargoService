@@ -1,0 +1,150 @@
+{% extends 'cargo/base.html' %}
+
+{% block title %}Регистрация - CargoService{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">Регистрация в CargoService</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <h5 class="mb-3">Основная информация</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_username" class="form-label">Логин *</label>
+                            {{ form.username }}
+                            {% if form.username.errors %}
+                                <div class="text-danger small">{{ form.username.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_email" class="form-label">Email *</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-danger small">{{ form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_phone" class="form-label">Телефон *</label>
+                            {{ form.phone }}
+                            <div class="form-text">Формат: +79991234567</div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="mb-3 mt-4">Тип аккаунта</h5>
+                    <div class="mb-3">
+                        {% for choice in form.user_type %}
+                        <div class="form-check">
+                            {{ choice.tag }}
+                            <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                {{ choice.choice_label }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Поля для отправителя (скрываются/показываются через JS) -->
+                    <div id="sender-fields" style="display: none;">
+                        <h5 class="mb-3 mt-4">Информация об отправителе</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_sender_name" class="form-label">Имя или название компании *</label>
+                                {{ form.sender_name }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="id_sender_type" class="form-label">Тип отправителя</label>
+                                {{ form.sender_type }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Поля для перевозчика (скрываются/показываются через JS) -->
+                    <div id="transporter-fields" style="display: none;">
+                        <h5 class="mb-3 mt-4">Информация о перевозчике</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_transporter_name" class="form-label">Название компании или ФИО *</label>
+                                {{ form.transporter_name }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="id_transporter_type" class="form-label">Тип перевозчика</label>
+                                {{ form.transporter_type }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="mb-3 mt-4">Пароль</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_password1" class="form-label">Пароль *</label>
+                            {{ form.password1 }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_password2" class="form-label">Подтверждение пароля *</label>
+                            {{ form.password2 }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" required id="terms-check">
+                            <label class="form-check-label" for="terms-check">
+                                Я соглашаюсь с <a href="#" target="_blank">условиями использования</a> и 
+                                <a href="#" target="_blank">политикой конфиденциальности</a>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-person-plus"></i> Зарегистрироваться
+                    </button>
+                    
+                    <div class="text-center mt-3">
+                        Уже есть аккаунт? <a href="{% url 'login' %}">Войдите</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Показ/скрытие полей в зависимости от типа аккаунта
+    document.addEventListener('DOMContentLoaded', function() {
+        const userTypeRadios = document.querySelectorAll('input[name="user_type"]');
+        const senderFields = document.getElementById('sender-fields');
+        const transporterFields = document.getElementById('transporter-fields');
+        
+        function toggleFields() {
+            const selectedType = document.querySelector('input[name="user_type"]:checked');
+            if (selectedType) {
+                if (selectedType.value === 'sender') {
+                    senderFields.style.display = 'block';
+                    transporterFields.style.display = 'none';
+                } else if (selectedType.value === 'transporter') {
+                    senderFields.style.display = 'none';
+                    transporterFields.style.display = 'block';
+                }
+            }
+        }
+        
+        // Инициализация
+        toggleFields();
+        
+        // Слушаем изменения
+        userTypeRadios.forEach(radio => {
+            radio.addEventListener('change', toggleFields);
+        });
+    });
+</script>
+{% endblock %}

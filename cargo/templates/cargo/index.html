@@ -1,0 +1,81 @@
+{% extends 'cargo/base.html' %}
+{% load static %}
+
+{% block title %}Главная - CargoService{% endblock %}
+
+{% block content %}
+<div class="hero-section text-center py-5 bg-light rounded">
+    <h1 class="display-4">CargoService</h1>
+    <p class="lead">Сервис попутных грузоперевозок</p>
+    
+    {% if not user.is_authenticated %}
+    <div class="mt-4">
+        <a href="{% url 'register' %}" class="btn btn-primary btn-lg me-3">
+            <i class="bi bi-person-plus"></i> Начать работу
+        </a>
+        <a href="{% url 'login' %}" class="btn btn-outline-primary btn-lg">
+            <i class="bi bi-box-arrow-in-right"></i> Войти
+        </a>
+    </div>
+    {% else %}
+    <div class="mt-4">
+        {% if user.user_type == 'sender' %}
+            <a href="{% url 'sender_dashboard' %}" class="btn btn-primary btn-lg">
+                <i class="bi bi-speedometer2"></i> Перейти в личный кабинет
+            </a>
+        {% else %}
+            <a href="{% url 'transporter_dashboard' %}" class="btn btn-primary btn-lg">
+                <i class="bi bi-speedometer2"></i> Перейти в личный кабинет
+            </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-box-seam display-1 text-primary"></i>
+                <h3 class="card-title mt-3">Для отправителей</h3>
+                <p class="card-text">Быстро находите перевозчиков для ваших грузов по оптимальным ценам</p>
+                <ul class="text-start">
+                    <li>Создание заявок за 2 минуты</li>
+                    <li>Автоподбор перевозчиков</li>
+                    <li>Отслеживание груза онлайн</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-truck display-1 text-success"></i>
+                <h3 class="card-title mt-3">Для перевозчиков</h3>
+                <p class="card-text">Находите попутные грузы и зарабатывайте больше</p>
+                <ul class="text-start">
+                    <li>Умный поиск подходящих заказов</li>
+                    <li>Отслеживание маршрутов</li>
+                    <li>Система рейтингов и отзывов</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-shield-check display-1 text-warning"></i>
+                <h3 class="card-title mt-3">Безопасность</h3>
+                <p class="card-text">Гарантия безопасности для всех участников</p>
+                <ul class="text-start">
+                    <li>Проверенные перевозчики</li>
+                    <li>Страхование грузов</li>
+                    <li>Безопасные платежи</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

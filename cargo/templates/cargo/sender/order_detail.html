@@ -1,0 +1,323 @@
+{% extends 'cargo/base.html' %}
+
+{% block title %}Заявка #{{ order.id }} - CargoService{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="bi bi-box-seam"></i> Заявка #{{ order.id }}
+        <small class="text-muted ms-2">{{ order.get_status_display }}</small>
+    </h1>
+    
+    <div class="btn-group">
+        <a href="{% url 'sender_orders_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к списку
+        </a>
+        
+        {% if order.status == 'searching' %}
+        <button type="button" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> Редактировать
+        </button>
+        <button type="button" class="btn btn-danger">
+            <i class="bi bi-x-circle"></i> Отменить
+        </button>
+        {% endif %}
+        
+        {% if order.status == 'assigned' or order.status == 'in_transit' %}
+        <a href="{% url 'sender_order_track' order.id %}" class="btn btn-success">
+            <i class="bi bi-map"></i> Отслеживать
+        </a>
+        {% endif %}
+        
+        {% if order.status == 'delivered' and not order.feedbacks.exists %}
+        <a href="{% url 'sender_order_feedback' order.id %}" class="btn btn-primary">
+            <i class="bi bi-chat-left-text"></i> Оставить отзыв
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- Основная информация -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Информация о заказе</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Параметры груза</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Вес:</strong></td>
+                                <td>{{ order.weight }} кг</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Габариты:</strong></td>
+                                <td>{{ order.length }} × {{ order.width }} × {{ order.height }} м</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Объем:</strong></td>
+                                <td>
+                                    {% with volume=order.length|multiply:order.width|multiply:order.height %}
+                                        {{ volume|floatformat:3 }} м³
+                                    {% endwith %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Стоимость:</strong></td>
+                                <td>{{ order.coast }} ₽</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6>Адреса</h6>
+                        <div class="mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-geo-alt text-primary me-2 mt-1"></i>
+                                <div>
+                                    <strong>Отправление:</strong><br>
+                                    {{ order.address_departure }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-geo-alt-fill text-success me-2 mt-1"></i>
+                                <div>
+                                    <strong>Назначение:</strong><br>
+                                    {{ order.address_arrival }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Даты -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Даты</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Плановые</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td>Создание заявки:</td>
+                                <td>{{ order.date_create|date:"d.m.Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <td>Отправление:</td>
+                                <td>{{ order.date_departure_plan|date:"d.m.Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <td>Доставка:</td>
+                                <td>{{ order.date_arrival_plan|date:"d.m.Y H:i" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Фактические</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td>Отправление:</td>
+                                <td>
+                                    {% if order.date_departure_fact %}
+                                        {{ order.date_departure_fact|date:"d.m.Y H:i" }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Доставка:</td>
+                                <td>
+                                    {% if order.date_arrival_fact %}
+                                        {{ order.date_arrival_fact|date:"d.m.Y H:i" }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Боковая панель -->
+    <div class="col-md-4">
+        <!-- Перевозчик -->
+        {% if order.transporter %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Перевозчик</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="mb-2">
+                        <i class="bi bi-truck display-4 text-primary"></i>
+                    </div>
+                    <h5>{{ order.transporter.name }}</h5>
+                    {% if order.transporter.score %}
+                    <div class="mb-2">
+                        {% with score=order.transporter.score|floatformat:1 %}
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= score|add:"0" %}
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                {% else %}
+                                    <i class="bi bi-star text-warning"></i>
+                                {% endif %}
+                            {% endfor %}
+                            <span class="ms-1">{{ score }}</span>
+                        {% endwith %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Тип:</strong> {{ order.transporter.get_type_display|default:"Не указан" }}
+                </div>
+                
+                <div class="d-grid">
+                    <button type="button" class="btn btn-outline-primary">
+                        <i class="bi bi-chat-left"></i> Написать сообщение
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Статус -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Статус заказа</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item {% if order.status != 'cancelled' %}active{% endif %}">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <strong>Создан</strong>
+                            <p class="text-muted small">{{ order.date_create|date:"d.m.Y H:i" }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item {% if order.status in 'assigned,in_transit,delivered' %}active{% endif %}">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <strong>Назначен перевозчик</strong>
+                            {% if order.transporter %}
+                                <p class="text-muted small">{{ order.transporter.name }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item {% if order.status in 'in_transit,delivered' %}active{% endif %}">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <strong>В пути</strong>
+                            {% if order.date_departure_fact %}
+                                <p class="text-muted small">{{ order.date_departure_fact|date:"d.m.Y H:i" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item {% if order.status == 'delivered' %}active{% endif %}">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <strong>Доставлен</strong>
+                            {% if order.date_arrival_fact %}
+                                <p class="text-muted small">{{ order.date_arrival_fact|date:"d.m.Y H:i" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Быстрые действия -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Действия</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="#" class="btn btn-outline-secondary">
+                        <i class="bi bi-printer"></i> Распечатать накладную
+                    </a>
+                    <a href="#" class="btn btn-outline-secondary">
+                        <i class="bi bi-download"></i> Скачать документы
+                    </a>
+                    <a href="#" class="btn btn-outline-secondary">
+                        <i class="bi bi-share"></i> Поделиться статусом
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Отзыв (если есть) -->
+{% if order.feedbacks.exists %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">Ваш отзыв</h5>
+    </div>
+    <div class="card-body">
+        {% with feedback=order.feedbacks.first %}
+        <div class="d-flex">
+            <div class="me-3">
+                {% for i in "12345" %}
+                    {% if forloop.counter <= feedback.score %}
+                        <i class="bi bi-star-fill text-warning fs-4"></i>
+                    {% else %}
+                        <i class="bi bi-star text-warning fs-4"></i>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <div>
+                <p class="mb-0">{{ feedback.text }}</p>
+                <small class="text-muted">{{ feedback.created_at|date:"d.m.Y H:i" }}</small>
+            </div>
+        </div>
+        {% endwith %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    .timeline-marker {
+        position: absolute;
+        left: -30px;
+        top: 0;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background-color: #dee2e6;
+        border: 3px solid white;
+    }
+    .timeline-item.active .timeline-marker {
+        background-color: #0d6efd;
+    }
+    .timeline-content {
+        padding-bottom: 10px;
+    }
+</style>
+{% endblock %}
