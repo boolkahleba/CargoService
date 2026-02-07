@@ -48,7 +48,7 @@ class RegistrationForm(UserCreationForm):
 
     email = forms.EmailField(required=True)
     phone = forms.CharField(
-        max_length=12,
+        max_length=13,
         required=True,
         help_text='Формат: +79991234567'
     )
@@ -103,78 +103,52 @@ class RegistrationForm(UserCreationForm):
 
 
 class OrderForm(forms.ModelForm):
-    """Форма создания/редактирования заказа"""
-
     class Meta:
         model = Order
         fields = [
-            'weight', 'height', 'width', 'length',
-            'coast', 'address_departure', 'address_arrival',
+            'weight', 'height', 'width', 'length', 'coast',
+            'address_departure', 'address_arrival',
             'date_departure_plan', 'date_arrival_plan'
         ]
         widgets = {
-            'weight': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Например: 100.5',
-                'step': '0.01'
-            }),
-            'height': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'В метрах',
-                'step': '0.001'
-            }),
-            'width': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'В метрах',
-                'step': '0.001'
-            }),
-            'length': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'В метрах',
-                'step': '0.001'
-            }),
-            'coast': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Стоимость в рублях',
-                'step': '0.01'
-            }),
-            'address_departure': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Начните вводить адрес...',
-                'id': 'address-departure'
-            }),
-            'address_arrival': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Начните вводить адрес...',
-                'id': 'address-arrival'
-            }),
             'date_departure_plan': forms.DateTimeInput(attrs={
-                'class': 'form-control',
-                'type': 'datetime-local'
+                'type': 'datetime-local',
+                'class': 'form-control'
             }),
             'date_arrival_plan': forms.DateTimeInput(attrs={
-                'class': 'form-control',
-                'type': 'datetime-local'
+                'type': 'datetime-local',
+                'class': 'form-control'
             }),
+            'weight': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
+            'height': forms.NumberInput(attrs={'step': '0.001', 'class': 'form-control'}),
+            'width': forms.NumberInput(attrs={'step': '0.001', 'class': 'form-control'}),
+            'length': forms.NumberInput(attrs={'step': '0.001', 'class': 'form-control'}),
+            'coast': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
+            'address_departure': forms.TextInput(attrs={'class': 'form-control'}),
+            'address_arrival': forms.TextInput(attrs={'class': 'form-control'}),
         }
         labels = {
             'weight': 'Вес груза (кг)',
             'height': 'Высота (м)',
             'width': 'Ширина (м)',
             'length': 'Длина (м)',
-            'coast': 'Предлагаемая стоимость (руб.)',
+            'coast': 'Предлагаемая стоимость (₽)',
             'address_departure': 'Адрес отправления',
             'address_arrival': 'Адрес назначения',
             'date_departure_plan': 'Плановая дата отправки',
             'date_arrival_plan': 'Плановая дата доставки',
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Добавляем CSS классы ко всем полям
-        for field_name, field in self.fields.items():
-            if 'class' not in field.widget.attrs:
-                field.widget.attrs['class'] = 'form-control'
+    def clean(self):
+        """Простая валидация дат"""
+        cleaned_data = super().clean()
+        date_departure = cleaned_data.get('date_departure_plan')
+        date_arrival = cleaned_data.get('date_arrival_plan')
+
+        if date_departure and date_arrival and date_departure >= date_arrival:
+            raise ValidationError('Дата отправки должна быть раньше даты доставки')
+
+        return cleaned_data
 
 
 class TransportForm(forms.ModelForm):

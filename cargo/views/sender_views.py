@@ -27,7 +27,7 @@ def sender_dashboard(request):
 
 @login_required
 def sender_order_create(request):
-    """Создание новой заявки"""
+    """Создание нового заказа"""
     if not hasattr(request.user, 'sender_profile'):
         messages.error(request, 'Доступно только для отправителей')
         return redirect('index')
@@ -37,15 +37,19 @@ def sender_order_create(request):
         if form.is_valid():
             order = form.save(commit=False)
             order.sender = request.user.sender_profile
+            order.status = 'searching'
             order.save()
-            messages.success(request, 'Заявка успешно создана!')
 
-            # TODO: Запустить автоматический подбор перевозчиков
+            messages.success(request, f'Заказ #{order.id} успешно создан!')
             return redirect('sender_order_detail', order_id=order.id)
     else:
         form = OrderForm()
 
-    return render(request, 'cargo/sender/order_create.html', {'form': form})
+    context = {
+        'form': form,
+        'is_edit_mode': False,
+    }
+    return render(request, 'cargo/sender/order_form.html', context)
 
 
 @login_required
@@ -67,19 +71,20 @@ def sender_orders_list(request):
 
 @login_required
 def sender_order_detail(request, order_id):
-    """Детали заказа"""
     if not hasattr(request.user, 'sender_profile'):
         messages.error(request, 'Доступно только для отправителей')
         return redirect('index')
 
     order = get_object_or_404(Order, id=order_id, sender=request.user.sender_profile)
-
-    # Получаем маршрут для отслеживания (если есть)
     route = Route.objects.filter(order=order).first()
+
+    # Вычисляем объем груза
+    volume = order.length * order.width * order.height
 
     context = {
         'order': order,
         'route': route,
+        'volume': volume,  # Добавляем объем в контекст
     }
     return render(request, 'cargo/sender/order_detail.html', context)
 
@@ -166,3 +171,35 @@ def sender_order_feedback(request, order_id):
         'form': form,
     }
     return render(request, 'cargo/sender/order_feedback.html', context)
+
+
+@login_required
+def sender_order_edit(request, order_id):
+    """Редактирование существующего заказа"""
+    if not hasattr(request.user, 'sender_profile'):
+        messages.error(request, 'Доступно только для отправителей')
+        return redirect('index')
+
+    # Получаем заказ и проверяем права доступа
+    order = get_object_or_404(Order, id=order_id, sender=request.user.sender_profile)
+
+    # Проверяем, что заказ можно редактировать (только в статусе поиска)
+    if order.status != 'searching':
+        messages.error(request, 'Заказ можно редактировать только пока он в статусе "Поиск перевозчика"')
+        return redirect('sender_order_detail', order_id=order.id)
+
+    if request.method == 'POST':
+        form = OrderForm(request.POST, instance=order)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Заказ #{order.id} успешно обновлен!')
+            return redirect('sender_order_detail', order_id=order.id)
+    else:
+        form = OrderForm(instance=order)
+
+    context = {
+        'form': form,
+        'order': order,
+        'is_edit_mode': True,  # Флаг для шаблона
+    }
+    return render(request, 'cargo/sender/order_form.html', context)

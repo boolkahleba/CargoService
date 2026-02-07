@@ -12,7 +12,7 @@
             <div class="card-body">
                 <form method="post" novalidate>
                     {% csrf_token %}
-                    
+
                     <h5 class="mb-3">Основная информация</h5>
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -30,7 +30,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="id_phone" class="form-label">Телефон *</label>
@@ -38,7 +38,7 @@
                             <div class="form-text">Формат: +79991234567</div>
                         </div>
                     </div>
-                    
+
                     <h5 class="mb-3 mt-4">Тип аккаунта</h5>
                     <div class="mb-3">
                         {% for choice in form.user_type %}
@@ -50,7 +50,7 @@
                         </div>
                         {% endfor %}
                     </div>
-                    
+
                     <!-- Поля для отправителя (скрываются/показываются через JS) -->
                     <div id="sender-fields" style="display: none;">
                         <h5 class="mb-3 mt-4">Информация об отправителе</h5>
@@ -65,7 +65,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Поля для перевозчика (скрываются/показываются через JS) -->
                     <div id="transporter-fields" style="display: none;">
                         <h5 class="mb-3 mt-4">Информация о перевозчике</h5>
@@ -80,7 +80,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <h5 class="mb-3 mt-4">Пароль</h5>
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -92,21 +92,21 @@
                             {{ form.password2 }}
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" required id="terms-check">
                             <label class="form-check-label" for="terms-check">
-                                Я соглашаюсь с <a href="#" target="_blank">условиями использования</a> и 
+                                Я соглашаюсь с <a href="#" target="_blank">условиями использования</a> и
                                 <a href="#" target="_blank">политикой конфиденциальности</a>
                             </label>
                         </div>
                     </div>
-                    
+
                     <button type="submit" class="btn btn-primary btn-lg w-100">
                         <i class="bi bi-person-plus"></i> Зарегистрироваться
                     </button>
-                    
+
                     <div class="text-center mt-3">
                         Уже есть аккаунт? <a href="{% url 'login' %}">Войдите</a>
                     </div>
@@ -124,7 +124,7 @@
         const userTypeRadios = document.querySelectorAll('input[name="user_type"]');
         const senderFields = document.getElementById('sender-fields');
         const transporterFields = document.getElementById('transporter-fields');
-        
+
         function toggleFields() {
             const selectedType = document.querySelector('input[name="user_type"]:checked');
             if (selectedType) {
@@ -137,10 +137,10 @@
                 }
             }
         }
-        
+
         // Инициализация
         toggleFields();
-        
+
         // Слушаем изменения
         userTypeRadios.forEach(radio => {
             radio.addEventListener('change', toggleFields);

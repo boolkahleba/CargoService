@@ -1,19 +1,23 @@
 {% extends 'cargo/base.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}Новый заказ - CargoService{% endblock %}
+{% block title %}
+    {% if is_edit_mode %}Редактирование заказа #{{ order.id }}{% else %}Новый заказ{% endif %} - CargoService
+{% endblock %}
 
 {% block content %}
     <div class="row">
         <div class="col-lg-8 mx-auto">
             <div class="card shadow">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header {% if is_edit_mode %}bg-warning text-dark{% else %}bg-primary text-white{% endif %}">
                     <h4 class="mb-0">
-                        <i class="bi bi-plus-circle"></i> Создание нового заказа
+                        <i class="bi {% if is_edit_mode %}bi-pencil-square{% else %}bi-plus-circle{% endif %}"></i>
+                        {% if is_edit_mode %}Редактирование заказа #{{ order.id }}{% else %}Создание нового
+                            заказа{% endif %}
                     </h4>
                 </div>
                 <div class="card-body">
-                    <form method="post" id="orderForm">
+                    <form method="post">
                         {% csrf_token %}
 
                         {% if form.errors %}
@@ -24,9 +28,6 @@
                                         {% if field.errors %}
                                             <li>{{ field.label }}: {{ field.errors.0 }}</li>
                                         {% endif %}
-                                    {% endfor %}
-                                    {% for error in form.non_field_errors %}
-                                        <li>{{ error }}</li>
                                     {% endfor %}
                                 </ul>
                             </div>
@@ -73,10 +74,17 @@
 
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                             <a href="{% url 'sender_orders_list' %}" class="btn btn-outline-secondary me-md-2">
+                                <i class="bi bi-arrow-90deg-left"></i> К списку заказов
+                            </a>
+                            <a href="
+                                    {% if is_edit_mode %}{% url 'sender_order_detail' order.id %}{% else %}{% url 'sender_orders_list' %}{% endif %}"
+                               class="btn btn-outline-secondary me-md-2">
                                 Отмена
                             </a>
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-check-circle"></i> Создать заказ
+                            <button type="submit"
+                                    class="btn {% if is_edit_mode %}btn-warning{% else %}btn-primary{% endif %} btn-lg">
+                                <i class="bi {% if is_edit_mode %}bi-check-square{% else %}bi-check-circle{% endif %}"></i>
+                                {% if is_edit_mode %}Сохранить изменения{% else %}Создать заказ{% endif %}
                             </button>
                         </div>
                     </form>
@@ -85,11 +93,17 @@
 
             <div class="card mt-3">
                 <div class="card-body">
-                    <h6><i class="bi bi-info-circle"></i> Что происходит после создания заказа?</h6>
+                    <h6><i class="bi bi-info-circle"></i> Информация</h6>
                     <ul class="mb-0">
-                        <li>Заказ получит статус "Поиск перевозчика"</li>
-                        <li>Вы сможете отслеживать его в списке своих заказов</li>
-                        <li>Перевозчики увидят ваш заказ в поиске</li>
+                        {% if is_edit_mode %}
+                            <li>Заказ находится в статусе: <span class="badge bg-warning">Поиск перевозчика</span></li>
+                            <li>После сохранения изменений перевозчики увидят обновленные данные</li>
+                            <li>Если заказ уже принят перевозчиком, редактирование будет невозможно</li>
+                        {% else %}
+                            <li>После создания заказ получит статус "Поиск перевозчика"</li>
+                            <li>Вы сможете редактировать заказ, пока он в этом статусе</li>
+                            <li>Перевозчики увидят ваш заказ в поиске</li>
+                        {% endif %}
                     </ul>
                 </div>
             </div>
