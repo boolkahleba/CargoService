@@ -76,25 +76,25 @@
                         </thead>
                         <tbody>
                         {% for order in orders %}
-                                <tr>
-                                    <td><strong>#{{ order.id }}</strong></td>
-                                    <td>
-                                        <div class="small">
-                                            <div>
-                                                <i class="bi bi-geo-alt"></i> {{ order.address_departure|truncatechars:30 }}
-                                            </div>
-                                            <div>
-                                                <i class="bi bi-geo-alt-fill"></i> {{ order.address_arrival|truncatechars:30 }}
-                                            </div>
+                            <tr>
+                                <td><strong>#{{ order.id }}</strong></td>
+                                <td>
+                                    <div class="small">
+                                        <div>
+                                            <i class="bi bi-geo-alt"></i> {{ order.address_departure|truncatechars:30 }}
                                         </div>
-                                    </td>
-                                    <td>
-                                        {{ order.weight }} кг<br>
-                                        <span class="text-muted small">
+                                        <div>
+                                            <i class="bi bi-geo-alt-fill"></i> {{ order.address_arrival|truncatechars:30 }}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {{ order.weight }} кг<br>
+                                    <span class="text-muted small">
                                     {{ order.length|default:0 }}×{{ order.width|default:0 }}×{{ order.height|default:0 }} м
                                 </span>
-                                    </td>
-                                    <td>
+                                </td>
+                                <td>
                                 <span class="badge bg-{% if order.status == 'searching' %}warning
                                                       {% elif order.status == 'assigned' %}info
                                                       {% elif order.status == 'in_transit' %}primary
@@ -102,60 +102,65 @@
                                                       {% else %}secondary{% endif %}">
                                     {{ order.get_status_display }}
                                 </span>
-                                    </td>
-                                    <td>
-                                        {% if order.transporter %}
-                                            {{ order.transporter.name|truncatechars:20 }}
-                                            {% if order.transporter.score %}
-                                                <div class="small">
-                                                    <i class="bi bi-star-fill text-warning"></i> {{ order.transporter.score }}
-                                                </div>
-                                            {% endif %}
-                                        {% else %}
-                                            <span class="text-muted">Не назначен</span>
+                                </td>
+                                <td>
+                                    {% if order.transporter %}
+                                        {{ order.transporter.name|truncatechars:20 }}
+                                        {% if order.transporter.score %}
+                                            <div class="small">
+                                                <i class="bi bi-star-fill text-warning"></i> {{ order.transporter.score }}
+                                            </div>
                                         {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if order.coast %}
-                                            {{ order.coast }} ₽
-                                        {% else %}
-                                            <span class="text-muted">—</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ order.date_create|date:"d.m.Y" }}</td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{% url 'sender_order_detail' order.id %}"
-                                               class="btn btn-outline-info" title="Просмотр">
-                                                <i class="bi bi-eye"></i>
+                                    {% else %}
+                                        <span class="text-muted">Не назначен</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.coast %}
+                                        {{ order.coast }} ₽
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ order.date_create|date:"d.m.Y" }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'sender_order_detail' order.id %}"
+                                           class="btn btn-outline-info" title="Просмотр">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+
+                                        {% if order.status == 'searching' %}
+                                            <a href="{% url 'sender_order_edit' order.id %}"
+                                               class="btn btn-outline-warning" title="Редактировать">
+                                                <i class="bi bi-pencil"></i>
                                             </a>
-
-                                            {% if order.status == 'searching' %}
-                                                <a href="{% url 'sender_order_edit' order.id %}"
-                                                   class="btn btn-outline-warning" title="Редактировать">
-                                                    <i class="bi bi-pencil"></i>
-                                                </a>
-                                                <a href="#" class="btn btn-outline-danger" title="Отменить">
+                                            <form method="post" action="{% url 'sender_order_cancel' order.id %}"
+                                                  class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                        onclick="return confirm('Вы уверены, что хотите отменить эту заявку?');">
                                                     <i class="bi bi-x-circle"></i>
-                                                </a>
-                                            {% endif %}
+                                                </button>
+                                            </form>
+                                        {% endif %}
 
-                                            {% if order.status == 'assigned' or order.status == 'in_transit' %}
-                                                <a href="{% url 'sender_order_track' order.id %}"
-                                                   class="btn btn-outline-success" title="Отслеживать">
-                                                    <i class="bi bi-map"></i>
-                                                </a>
-                                            {% endif %}
+                                        {% if order.status == 'assigned' or order.status == 'in_transit' %}
+                                            <a href="{% url 'sender_order_track' order.id %}"
+                                               class="btn btn-outline-success" title="Отслеживать">
+                                                <i class="bi bi-map"></i>
+                                            </a>
+                                        {% endif %}
 
-                                            {% if order.status == 'delivered' %}
-                                                <a href="{% url 'sender_order_feedback' order.id %}"
-                                                   class="btn btn-outline-primary" title="Оставить отзыв">
-                                                    <i class="bi bi-chat-left-text"></i>
-                                                </a>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
+                                        {% if order.status == 'delivered' %}
+                                            <a href="{% url 'sender_order_feedback' order.id %}"
+                                               class="btn btn-outline-primary" title="Оставить отзыв">
+                                                <i class="bi bi-chat-left-text"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
 
                         {% endfor %}
                         </tbody>
@@ -169,6 +174,7 @@
                             {% if orders.has_previous %}
                                 <li class="page-item">
                                     <a class="page-link" href="?page=
+
                                             {{ orders.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
                                         <i class="bi bi-chevron-left"></i>
                                     </a>
@@ -183,6 +189,7 @@
                                 {% else %}
                                     <li class="page-item">
                                         <a class="page-link" href="?page=
+
                                                 {{ i }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
                                     </li>
                                 {% endif %}
@@ -191,6 +198,7 @@
                             {% if orders.has_next %}
                                 <li class="page-item">
                                     <a class="page-link" href="?page=
+
                                             {{ orders.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
                                         <i class="bi bi-chevron-right"></i>
                                     </a>

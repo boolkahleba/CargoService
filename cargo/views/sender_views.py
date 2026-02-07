@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.db import models
 from cargo.models import Order, Sender, Route, Feedback
 from cargo.forms import OrderForm, FeedbackForm
+from django.views.decorators.http import require_POST
 
 
 @login_required
@@ -203,3 +204,33 @@ def sender_order_edit(request, order_id):
         'is_edit_mode': True,  # Флаг для шаблона
     }
     return render(request, 'cargo/sender/order_form.html', context)
+
+
+@login_required
+@require_POST  # Разрешаем только POST-запросы для безопасности
+def sender_order_cancel(request, order_id):
+    """Отмена заявки отправителем"""
+    if not hasattr(request.user, 'sender_profile'):
+        messages.error(request, 'Доступно только для отправителей')
+        return redirect('sender_dashboard')
+
+    # Находим заявку, проверяем, что она принадлежит текущему пользователю
+    order = get_object_or_404(Order, id=order_id, sender=request.user.sender_profile)
+
+    # Проверяем, можно ли отменить заявку
+    if order.status != Order.Status.SEARCHING:
+        messages.error(request,
+                       'Заявку можно отменить только в статусе "Поиск перевозчика"')
+        return redirect('sender_order_detail', order_id=order.id)
+
+    # Меняем статус на "Отменен"
+    order.status = Order.Status.CANCELLED
+    order.save()
+
+    # Добавляем запись в журнал (опционально)
+    messages.success(request, f'Заявка #{order.id} успешно отменена')
+
+    # Перенаправляем на список заявок
+    return redirect('sender_orders_list')
+
+

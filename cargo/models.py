@@ -158,6 +158,14 @@ class Transport(models.Model):
     height = models.DecimalField(max_digits=6, decimal_places=3, verbose_name='Высота кузова (м)')
     is_active = models.BooleanField(default=True, verbose_name='Активен')
 
+    # cargo/models.py в классе Transport
+    @property
+    def volume(self):
+        """Рассчитывает объем кузова"""
+        if all([self.length, self.width, self.height]):
+            return self.length * self.width * self.height
+        return
+
     def __str__(self):
         return f"{self.get_type_display()} ({self.transporter.name})"
 

@@ -2,6 +2,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.utils.translation import gettext_lazy as _
 from .models import User, Sender, Transporter, Order, Transport, Feedback
 
@@ -152,46 +153,38 @@ class OrderForm(forms.ModelForm):
 
 
 class TransportForm(forms.ModelForm):
-    """Форма добавления/редактирования транспорта"""
-    photo = forms.ImageField(
-        required=False,
-        widget=forms.FileInput(attrs={'class': 'form-control'}),
-        help_text='Загрузите фото транспорта (необязательно)'
-    )
+    """Форма добавления транспорта"""
 
     class Meta:
         model = Transport
-        fields = ['type', 'capacity', 'length', 'width', 'height', 'photo']
+        fields = ['type', 'capacity', 'length', 'width', 'height']
         widgets = {
-            'type': forms.Select(attrs={'class': 'form-select'}),
-            'capacity': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'В кг',
-                'step': '0.01'
-            }),
-            'length': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'В метрах',
-                'step': '0.001'
-            }),
-            'width': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'В метрах',
-                'step': '0.001'
-            }),
-            'height': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'В метрах',
-                'step': '0.001'
-            }),
+            'capacity': forms.NumberInput(attrs={'step': '0.01'}),
+            'length': forms.NumberInput(attrs={'step': '0.001'}),
+            'width': forms.NumberInput(attrs={'step': '0.001'}),
+            'height': forms.NumberInput(attrs={'step': '0.001'}),
         }
         labels = {
             'type': 'Тип транспорта',
-            'capacity': 'Грузоподъемность',
-            'length': 'Длина кузова',
-            'width': 'Ширина кузова',
-            'height': 'Высота кузова',
+            'capacity': 'Грузоподъемность (кг)',
+            'length': 'Длина кузова (м)',
+            'width': 'Ширина кузова (м)',
+            'height': 'Высота кузова (м)',
         }
+
+        capacity = forms.DecimalField(
+            max_digits=10,
+            decimal_places=2,
+            validators=[MinValueValidator(0.01)],
+            label='Грузоподъемность (кг)'
+        )
+
+        length = forms.DecimalField(
+            max_digits=6,
+            decimal_places=3,
+            validators=[MinValueValidator(0.001)],
+            label='Длина кузова (м)'
+        )
 
 
 class FeedbackForm(forms.ModelForm):

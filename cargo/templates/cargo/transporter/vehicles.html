@@ -3,22 +3,33 @@
 {% block title %}Мой транспорт - CargoService{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">
-    <i class="bi bi-truck"></i> Мой транспорт
-</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="bi bi-truck"></i> Мой транспорт
+    </h1>
+    <a href="{% url 'transporter_vehicle_add' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Добавить транспорт
+    </a>
+</div>
 
 <div class="row">
     {% for vehicle in vehicles %}
     <div class="col-md-6 col-lg-4 mb-4">
         <div class="card h-100 shadow">
-            <div class="card-header bg-{% if vehicle.is_active %}success{% else %}secondary{% endif %} text-white">
+            <div class="card-header bg-{% if vehicle.is_active %}success{% else %}secondary{% endif %} text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">{{ vehicle.get_type_display }}</h5>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="active_{{ vehicle.id }}"
+                           {% if vehicle.is_active %}checked{% endif %}
+                           onchange="toggleVehicleStatus({{ vehicle.id }})">
+                    <label class="form-check-label" for="active_{{ vehicle.id }}"></label>
+                </div>
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
                     <i class="bi bi-truck-front display-1 text-muted"></i>
                 </div>
-                
+
                 <table class="table table-sm">
                     <tr>
                         <th>Грузоподъемность:</th>
@@ -27,6 +38,10 @@
                     <tr>
                         <th>Габариты кузова:</th>
                         <td>{{ vehicle.length }}×{{ vehicle.width }}×{{ vehicle.height }} м</td>
+                    </tr>
+                    <tr>
+                        <th>Объем:</th>
+                        <td>{{ vehicle.volume|floatformat:2 }} м³</td>
                     </tr>
                     <tr>
                         <th>Статус:</th>
@@ -42,10 +57,45 @@
             </div>
             <div class="card-footer">
                 <div class="btn-group w-100">
-                    <button class="btn btn-sm btn-outline-primary">Редактировать</button>
-                    <button class="btn btn-sm btn-outline-{% if vehicle.is_active %}warning{% else %}success{% endif %}">
-                        {% if vehicle.is_active %}Отключить{% else %}Активировать{% endif %}
+                    <a href="{% url 'transporter_vehicle_edit' vehicle.id %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Редактировать
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger"
+                            data-bs-toggle="modal" data-bs-target="#deleteModal{{ vehicle.id }}">
+                        <i class="bi bi-trash"></i> Удалить
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно подтверждения удаления -->
+        <div class="modal fade" id="deleteModal{{ vehicle.id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle"></i> Подтверждение удаления
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Вы уверены, что хотите удалить транспортное средство <strong>"{{ vehicle.get_type_display }}"</strong>?</p>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-info-circle"></i>
+                            Это действие нельзя будет отменить. Все данные о транспортном средстве будут безвозвратно удалены.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i> Отмена
+                        </button>
+                        <form method="post" action="{% url 'transporter_vehicle_delete' vehicle.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Да, удалить
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -63,4 +113,28 @@
     </div>
     {% endfor %}
 </div>
+
+<!-- Скрипт для переключения статуса активности -->
+<script>
+function toggleVehicleStatus(vehicleId) {
+    fetch(`/transporter/vehicles/${vehicleId}/toggle/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        location.reload();
+    });
+}
+</script>
 {% endblock %}

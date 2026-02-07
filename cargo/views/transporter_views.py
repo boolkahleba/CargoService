@@ -4,26 +4,42 @@ from django.contrib import messages
 from cargo.models import Transport, Order, Route, Transporter
 from cargo.forms import TransportForm
 from django.db import models
+from django.views.decorators.http import require_POST
 
 
 @login_required
 def transporter_dashboard(request):
-    """Дашборд перевозчика"""
     if not hasattr(request.user, 'transporter_profile'):
         messages.error(request, 'Доступно только для перевозчиков')
         return redirect('index')
 
     transporter = request.user.transporter_profile
-    active_orders = Order.objects.filter(transporter=transporter, status__in=['assigned', 'in_transit'])
-    vehicles = Transport.objects.filter(transporter=transporter)
+
+    # Получаем данные для дашборда
+    active_orders = Order.objects.filter(
+        transporter=transporter,
+        status__in=['assigned', 'in_transit']
+    ).order_by('-date_create')[:5]
+
+    vehicles = Transport.objects.filter(transporter=transporter, is_active=True)
+
+    # Рассчитываем общий заработок
+    completed_orders = Order.objects.filter(
+        transporter=transporter,
+        status='delivered'
+    )
+    total_earnings = completed_orders.aggregate(
+        total=models.Sum('coast')
+    )['total'] or 0
+
+    # Считаем количество выполненных заказов
+    completed_orders_count = completed_orders.count()
 
     context = {
         'active_orders': active_orders,
         'vehicles': vehicles,
-        'total_earnings': Order.objects.filter(
-            transporter=transporter,
-            status='delivered'
-        ).aggregate(models.Sum('coast'))['coast__sum'] or 0,
+        'total_earnings': total_earnings,
+        'completed_orders_count': completed_orders_count,
     }
     return render(request, 'cargo/transporter/dashboard.html', context)
 
@@ -47,12 +63,13 @@ def transporter_vehicle_add(request):
         return redirect('index')
 
     if request.method == 'POST':
-        form = TransportForm(request.POST, request.FILES)
+        form = TransportForm(request.POST)
         if form.is_valid():
             vehicle = form.save(commit=False)
             vehicle.transporter = request.user.transporter_profile
+            vehicle.is_active = True  # Новый транспорт по умолчанию активен
             vehicle.save()
-            messages.success(request, 'Транспортное средство добавлено!')
+            messages.success(request, f'Транспортное средство "{vehicle.get_type_display()}" успешно добавлено!')
             return redirect('transporter_vehicles')
     else:
         form = TransportForm()
@@ -151,3 +168,54 @@ def transporter_orders_list(request):
         'orders': orders,
     }
     return render(request, 'cargo/transporter/orders_list.html', context)
+
+
+@login_required
+def transporter_vehicle_edit(request, vehicle_id):
+    """Редактирование транспортного средства"""
+    if not hasattr(request.user, 'transporter_profile'):
+        messages.error(request, 'Доступно только для перевозчиков')
+        return redirect('index')
+
+    # Получаем транспорт, проверяя, что он принадлежит текущему перевозчику
+    vehicle = get_object_or_404(
+        Transport,
+        id=vehicle_id,
+        transporter=request.user.transporter_profile
+    )
+
+    if request.method == 'POST':
+        form = TransportForm(request.POST, instance=vehicle)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Транспорт "{vehicle.get_type_display()}" успешно обновлен!')
+            return redirect('transporter_vehicles')
+    else:
+        form = TransportForm(instance=vehicle)
+
+    return render(request, 'cargo/transporter/vehicle_edit.html', {
+        'form': form,
+        'vehicle': vehicle
+    })
+
+
+@login_required
+@require_POST
+def transporter_vehicle_delete(request, vehicle_id):
+    """Удаление транспортного средства"""
+    if not hasattr(request.user, 'transporter_profile'):
+        messages.error(request, 'Доступно только для перевозчиков')
+        return redirect('index')
+
+    # Получаем транспорт, проверяя, что он принадлежит текущему перевозчику
+    vehicle = get_object_or_404(
+        Transport,
+        id=vehicle_id,
+        transporter=request.user.transporter_profile
+    )
+
+    vehicle_type = vehicle.get_type_display()
+    vehicle.delete()
+
+    messages.success(request, f'Транспорт "{vehicle_type}" успешно удален!')
+    return redirect('transporter_vehicles')

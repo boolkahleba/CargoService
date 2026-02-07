@@ -18,9 +18,14 @@
                 <a href="{% url 'sender_order_edit' order.id %}" class="btn btn-warning">
                     <i class="bi bi-pencil-square"></i> Редактировать
                 </a>
-                <button type="button" class="btn btn-danger">
-                    <i class="bi bi-x-circle"></i> Отменить
-                </button>
+                <form method="post" action="{% url 'sender_order_cancel' order.id %}"
+                      class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                            onclick="return confirm('Вы уверены, что хотите отменить эту заявку?');" style="height: 100%; border-bottom-left-radius: 0; border-top-left-radius: 0">
+                        <i class="bi bi-x-circle"></i> Отменить
+                    </button>
+                </form>
             {% endif %}
 
             {% if order.status == 'assigned' or order.status == 'in_transit' %}

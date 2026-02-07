@@ -19,7 +19,7 @@ class UserAdmin(BaseUserAdmin):
     # Порядок и группировка полей на странице редактирования
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name', 'email', 'phone')}),
+        (_('Personal info'), {'fields': ('email', 'phone')}),  # Убраны first_name, last_name
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'user_type'),
         }),
@@ -33,6 +33,25 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('username', 'email', 'phone', 'user_type', 'password1', 'password2'),
         }),
     )
+
+    def get_fields(self, request, obj=None):
+        """Удаляем first_name и last_name из списка полей"""
+        fields = super().get_fields(request, obj)
+        # Удаляем поля, которые удалены из модели
+        fields_to_remove = ['first_name', 'last_name']
+        return [f for f in fields if f not in fields_to_remove]
+
+    def get_form(self, request, obj=None, **kwargs):
+        """Удаляем поля из формы"""
+        form = super().get_form(request, obj, **kwargs)
+
+        # Удаляем поля из формы, если они там появились
+        if 'first_name' in form.base_fields:
+            del form.base_fields['first_name']
+        if 'last_name' in form.base_fields:
+            del form.base_fields['last_name']
+
+        return form
 
 
 # 2. Профиль Отправителя (inline для User)

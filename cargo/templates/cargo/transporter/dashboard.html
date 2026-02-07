@@ -1,10 +1,446 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Дашборд перевозчика - CargoService</title>
-</head>
-<body>
+{% extends 'cargo/base.html' %}
+{% load static %}
 
-</body>
-</html>
+{% block title %}Дашборд перевозчика - CargoService{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .stat-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+    .quick-action-btn {
+        border-radius: 10px;
+        padding: 20px 15px;
+        text-align: center;
+        transition: all 0.3s;
+        border: 2px solid transparent;
+    }
+    .quick-action-btn:hover {
+        transform: scale(1.05);
+        border-color: #0d6efd;
+        background-color: #f8f9fa;
+    }
+    .vehicle-status {
+        font-size: 0.85rem;
+    }
+    .order-status-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+    .map-container {
+        height: 250px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .earning-chart {
+        height: 200px;
+        position: relative;
+    }
+    .chart-bar {
+        position: absolute;
+        bottom: 0;
+        width: 30px;
+        border-radius: 5px 5px 0 0;
+        background: #0d6efd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Заголовок и приветствие -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1">
+            <i class="bi bi-speedometer2 text-primary"></i> Дашборд перевозчика
+        </h1>
+        <p class="text-muted mb-0">
+            Добро пожаловать, {{ user.transporter_profile.name|default:user.username }}!
+        </p>
+    </div>
+    <div class="text-end">
+        <small class="text-muted d-block">Текущий рейтинг</small>
+        <div class="h4 mb-0">
+            <i class="bi bi-star-fill text-warning"></i>
+            {{ user.transporter_profile.score|default:"0.00" }}/5.00
+        </div>
+    </div>
+</div>
+
+<!-- Карточки статистики -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-icon">
+                            <i class="bi bi-currency-dollar"></i>
+                        </div>
+                        <h5 class="card-title mt-2">Общий заработок</h5>
+                        <h2 class="mb-0">{{ total_earnings|floatformat:0 }} ₽</h2>
+                        <small>За все время</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-icon">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <h5 class="card-title mt-2">Выполнено заказов</h5>
+                        <h2 class="mb-0">{{ completed_orders_count|default:"0" }}</h2>
+                        <small>За все время</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-icon">
+                            <i class="bi bi-truck"></i>
+                        </div>
+                        <h5 class="card-title mt-2">Активные заказы</h5>
+                        <h2 class="mb-0">{{ active_orders.count|default:"0" }}</h2>
+                        <small>В работе сейчас</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-icon">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <h5 class="card-title mt-2">Транспорт</h5>
+                        <h2 class="mb-0">{{ vehicles.count|default:"0" }}</h2>
+                        <small>Доступных единиц</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Основной контент в две колонки -->
+<div class="row g-4">
+    <!-- Левая колонка: Активные заказы и быстрые действия -->
+    <div class="col-lg-8">
+        <!-- Активные заказы -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history text-primary"></i> Активные заказы
+                </h5>
+                <a href="{% url 'transporter_orders_list' %}" class="btn btn-sm btn-outline-primary">
+                    Все заказы <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                {% if active_orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Заказ</th>
+                                <th>Маршрут</th>
+                                <th>Груз</th>
+                                <th>Стоимость</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in active_orders %}
+                            <tr>
+                                <td>
+                                    <strong>#{{ order.id }}</strong>
+                                    <div class="small text-muted">{{ order.date_create|date:"d.m.Y" }}</div>
+                                </td>
+                                <td>
+                                    <div class="small">
+                                        <div><i class="bi bi-geo-alt text-success"></i> {{ order.address_departure|truncatechars:20 }}</div>
+                                        <div><i class="bi bi-geo-alt text-danger"></i> {{ order.address_arrival|truncatechars:20 }}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="small">
+                                        <div>{{ order.weight }} кг</div>
+                                        <div>{{ order.length }}×{{ order.width }}×{{ order.height }} м</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong>{{ order.coast }} ₽</strong>
+                                </td>
+                                <td>
+                                    <span class="order-status-badge
+                                        {% if order.status == 'assigned' %}bg-info
+                                        {% elif order.status == 'in_transit' %}bg-primary
+                                        {% elif order.status == 'delivered' %}bg-success
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ order.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'transporter_order_detail' order.id %}" class="btn btn-outline-info">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        {% if order.status == 'assigned' or order.status == 'in_transit' %}
+                                        <a href="#" class="btn btn-outline-success">
+                                            <i class="bi bi-map"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-inbox display-4 text-muted"></i>
+                    <p class="mt-3">У вас пока нет активных заказов</p>
+                    <a href="{% url 'transporter_orders_search' %}" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Найти заказы
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Быстрые действия -->
+        <div class="card shadow">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-lightning-charge text-warning"></i> Быстрые действия</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <a href="{% url 'transporter_orders_search' %}" class="card quick-action-btn text-decoration-none">
+                            <div class="card-body">
+                                <div class="text-primary mb-2">
+                                    <i class="bi bi-search display-6"></i>
+                                </div>
+                                <h6 class="card-title">Найти заказы</h6>
+                                <p class="small text-muted">Поиск подходящих грузов</p>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'transporter_vehicle_add' %}" class="card quick-action-btn text-decoration-none">
+                            <div class="card-body">
+                                <div class="text-success mb-2">
+                                    <i class="bi bi-plus-circle display-6"></i>
+                                </div>
+                                <h6 class="card-title">Добавить транспорт</h6>
+                                <p class="small text-muted">Новое ТС в парк</p>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'transporter_routes' %}" class="card quick-action-btn text-decoration-none">
+                            <div class="card-body">
+                                <div class="text-info mb-2">
+                                    <i class="bi bi-signpost display-6"></i>
+                                </div>
+                                <h6 class="card-title">Планирование</h6>
+                                <p class="small text-muted">Маршруты и график</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая колонка: Транспорт, карта и уведомления -->
+    <div class="col-lg-4">
+        <!-- Ваш транспорт -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-truck text-success"></i> Ваш транспорт</h5>
+            </div>
+            <div class="card-body">
+                {% if vehicles %}
+                <div class="list-group list-group-flush">
+                    {% for vehicle in vehicles|slice:":3" %}
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ vehicle.get_type_display }}</h6>
+                                <div class="small text-muted">
+                                    <span class="vehicle-status badge {% if vehicle.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {% if vehicle.is_active %}Активен{% else %}Неактивен{% endif %}
+                                    </span>
+                                    <span class="ms-2">{{ vehicle.capacity }} кг</span>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="small text-muted">{{ vehicle.length }}×{{ vehicle.width }}×{{ vehicle.height }} м</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if vehicles.count > 3 %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'transporter_vehicles' %}" class="btn btn-sm btn-outline-success">
+                        +{{ vehicles.count|add:"-3" }} ещё
+                    </a>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-truck text-muted display-6"></i>
+                    <p class="mt-2">Транспорт не добавлен</p>
+                    <a href="{% url 'transporter_vehicle_add' %}" class="btn btn-sm btn-success">
+                        Добавить первый транспорт
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Карта активных рейсов -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-map text-danger"></i> Активные рейсы на карте</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="map-container">
+                    <div class="h-100 d-flex flex-column justify-content-center align-items-center">
+                        <i class="bi bi-geo-alt display-1 text-muted"></i>
+                        <p class="mt-3">Интеграция с Яндекс.Картами</p>
+                        <small class="text-muted">Для работы нужен API-ключ</small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-light">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle"></i>
+                    Отображаются текущие местоположения ваших активных рейсов
+                </small>
+            </div>
+        </div>
+
+        <!-- График заработка -->
+        <div class="card shadow">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-graph-up text-primary"></i> Заработок за месяц</h5>
+            </div>
+            <div class="card-body">
+                <div class="earning-chart d-flex align-items-end justify-content-around px-3">
+                    <div class="text-center">
+                        <div class="chart-bar" style="height: 70%;"></div>
+                        <div class="small mt-1">Пн</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="chart-bar" style="height: 40%;"></div>
+                        <div class="small mt-1">Вт</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="chart-bar" style="height: 85%;"></div>
+                        <div class="small mt-1">Ср</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="chart-bar" style="height: 60%;"></div>
+                        <div class="small mt-1">Чт</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="chart-bar" style="height: 95%;"></div>
+                        <div class="small mt-1">Пт</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="chart-bar" style="height: 50%;"></div>
+                        <div class="small mt-1">Сб</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="chart-bar" style="height: 75%;"></div>
+                        <div class="small mt-1">Вс</div>
+                    </div>
+                </div>
+                <div class="text-center mt-3">
+                    <small class="text-muted">График обновляется ежедневно</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Уведомления -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-bell text-warning"></i> Последние уведомления
+                </h5>
+                <a href="{% url 'notifications_list' %}" class="btn btn-sm btn-outline-warning">
+                    Все уведомления
+                </a>
+            </div>
+            <div class="card-body">
+                {% if notifications %}
+                    <!-- Список уведомлений будет здесь -->
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-check-circle display-4 text-success"></i>
+                    <p class="mt-3">У вас нет новых уведомлений</p>
+                    <p class="small text-muted mb-0">Все задачи выполнены, новые заказы ожидают в поиске</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Простая анимация для графиков
+    const bars = document.querySelectorAll('.chart-bar');
+    bars.forEach(bar => {
+        const height = bar.style.height;
+        bar.style.height = '0%';
+        setTimeout(() => {
+            bar.style.height = height;
+        }, 300);
+    });
+
+    // Обновление данных каждые 30 секунд (заглушка)
+    setInterval(() => {
+        console.log('Обновление данных дашборда...');
+    }, 30000);
+});
+</script>
+{% endblock %}

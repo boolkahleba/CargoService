@@ -1,0 +1,116 @@
+{% extends 'cargo/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Добавить транспорт - CargoService{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-plus-circle"></i> Добавить новое транспортное средство
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.type|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.capacity|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4 mb-3">Габариты кузова</h5>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.length|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.width|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.height|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-4">
+                        <h6><i class="bi bi-info-circle"></i> Важная информация</h6>
+                        <ul class="mb-0">
+                            <li>Укажите точные характеристики вашего транспорта</li>
+                            <li>Система будет подбирать заказы в соответствии с этими параметрами</li>
+                            <li>Вы всегда сможете отредактировать или отключить транспорт в списке</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{% url 'transporter_vehicles' %}" class="btn btn-outline-secondary me-md-2">
+                            <i class="bi bi-arrow-left"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Добавить транспорт
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Справка по типам транспорта -->
+        <div class="card shadow mt-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-question-circle"></i> Справка по типам транспорта</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Тип</th>
+                                <th>Описание</th>
+                                <th>Примерная грузоподъемность</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Грузовик</strong></td>
+                                <td>Стандартный грузовой автомобиль</td>
+                                <td>5,000 - 20,000 кг</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Фургон</strong></td>
+                                <td>Закрытый фургон для мелких грузов</td>
+                                <td>1,000 - 3,000 кг</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Минивэн</strong></td>
+                                <td>Пассажирский транспорт для небольших грузов</td>
+                                <td>500 - 1,000 кг</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Пикап</strong></td>
+                                <td>Грузовой автомобиль с открытым кузовом</td>
+                                <td>800 - 1,500 кг</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
