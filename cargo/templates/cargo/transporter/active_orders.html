@@ -1,0 +1,485 @@
+{% extends 'cargo/base.html' %}
+
+{% block title %}Активные заказы - CargoService{% endblock %}
+
+{% block extra_css %}
+<style>
+    .order-card {
+        border-left: 4px solid;
+        transition: all 0.3s;
+    }
+    .order-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .order-card.assigned {
+        border-left-color: #0dcaf0;
+    }
+    .order-card.in-transit {
+        border-left-color: #0d6efd;
+    }
+    .status-badge {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    .route-indicator {
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, #198754 0%, #0d6efd 50%, #dc3545 100%);
+        border-radius: 2px;
+        position: relative;
+        margin: 10px 0;
+    }
+    .current-position {
+        position: absolute;
+        top: -6px;
+        width: 16px;
+        height: 16px;
+        background: #ffc107;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px #ffc107;
+    }
+    .progress-info {
+        font-size: 0.85rem;
+    }
+    .action-buttons .btn {
+        padding: 5px 12px;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="bi bi-clock-history text-primary"></i> Активные заказы
+    </h1>
+    <div>
+        <a href="{% url 'transporter_orders_search' %}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-search"></i> Найти новые заказы
+        </a>
+        <a href="{% url 'transporter_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-speedometer2"></i> На дашборд
+        </a>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-1">Всего активных</h5>
+                        <h2 class="mb-0">{{ total_orders }}</h2>
+                    </div>
+                    <div class="text-primary">
+                        <i class="bi bi-list-ul display-6"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-1">Назначенные</h5>
+                        <h2 class="mb-0">{{ assigned_count }}</h2>
+                    </div>
+                    <div class="text-info">
+                        <i class="bi bi-calendar-check display-6"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-1">В пути</h5>
+                        <h2 class="mb-0">{{ in_transit_count }}</h2>
+                    </div>
+                    <div class="text-primary">
+                        <i class="bi bi-truck display-6"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Фильтры -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-filter"></i> Фильтры</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Статус</label>
+                <select name="status" class="form-select">
+                    <option value="">Все статусы</option>
+                    <option value="assigned" {% if request.GET.status == 'assigned' %}selected{% endif %}>
+                        Назначенные
+                    </option>
+                    <option value="in_transit" {% if request.GET.status == 'in_transit' %}selected{% endif %}>
+                        В пути
+                    </option>
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">От</label>
+                <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">До</label>
+                <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+            </div>
+            
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="btn-group w-100">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-filter"></i> Применить
+                    </button>
+                    <a href="{% url 'transporter_active_orders' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Сбросить
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Список заказов -->
+<div class="card shadow">
+    <div class="card-body">
+        {% if orders %}
+            {% for order in orders %}
+            <div class="card order-card mb-3 {% if order.status == 'assigned' %}assigned{% else %}in-transit{% endif %}">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- Информация о заказе -->
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h5 class="card-title mb-1">
+                                        Заказ #{{ order.id }}
+                                        <span class="status-badge 
+                                            {% if order.status == 'assigned' %}bg-info
+                                            {% else %}bg-primary{% endif %}">
+                                            {{ order.get_status_display }}
+                                        </span>
+                                    </h5>
+                                    <p class="text-muted mb-2">
+                                        <i class="bi bi-calendar"></i> Создан: {{ order.date_create|date:"d.m.Y H:i" }}
+                                    </p>
+                                </div>
+                                <div class="text-end">
+                                    <h4 class="text-success mb-0">{{ order.coast }} ₽</h4>
+                                    <small class="text-muted">Стоимость доставки</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Маршрут -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body py-2">
+                                            <h6 class="mb-1">
+                                                <i class="bi bi-geo-alt-fill text-success"></i> Отправление
+                                            </h6>
+                                            <p class="mb-0">{{ order.address_departure }}</p>
+                                            <small class="text-muted">
+                                                План: {{ order.date_departure_plan|date:"d.m.Y H:i" }}
+                                                {% if order.date_departure_fact %}
+                                                    <br>Факт: {{ order.date_departure_fact|date:"d.m.Y H:i" }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body py-2">
+                                            <h6 class="mb-1">
+                                                <i class="bi bi-geo-alt-fill text-danger"></i> Назначение
+                                            </h6>
+                                            <p class="mb-0">{{ order.address_arrival }}</p>
+                                            <small class="text-muted">
+                                                План: {{ order.date_arrival_plan|date:"d.m.Y H:i" }}
+                                                {% if order.date_arrival_fact %}
+                                                    <br>Факт: {{ order.date_arrival_fact|date:"d.m.Y H:i" }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Индикатор маршрута -->
+                            {% if order.status == 'in_transit' and order.routes.first %}
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="text-muted">Прогресс доставки</small>
+                                    <small class="text-muted">
+                                        {% with route=order.routes.first %}
+                                            {% if route.current_lat and route.current_lon %}
+                                                Координаты: {{ route.current_lat|floatformat:4 }}, {{ route.current_lon|floatformat:4 }}
+                                            {% endif %}
+                                        {% endwith %}
+                                    </small>
+                                </div>
+                                <div class="route-indicator">
+                                    <div class="current-position" style="left: 30%;"></div>
+                                </div>
+                                <div class="progress-info d-flex justify-content-between">
+                                    <small>Отправление</small>
+                                    <small class="text-primary">В пути</small>
+                                    <small>Доставка</small>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Характеристики груза -->
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="text-muted small">Вес</div>
+                                        <div class="h5 mb-0">{{ order.weight }} кг</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="text-muted small">Габариты</div>
+                                        <div class="h6 mb-0">{{ order.length }}×{{ order.width }}×{{ order.height }} м</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="text-muted small">Отправитель</div>
+                                        <div class="h6 mb-0">{{ order.sender.name|default:"Не указан" }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="text-muted small">Телефон</div>
+                                        <div class="h6 mb-0">{{ order.sender.user.phone|default:"Не указан" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 border-start">
+                            <!-- Действия и дополнительная информация -->
+                            <div class="d-flex flex-column h-100">
+                                <div class="mb-3">
+                                    <h6><i class="bi bi-info-circle"></i> Информация о доставке</h6>
+                                    <ul class="list-unstyled small">
+                                        <li><i class="bi bi-clock"></i> Время в пути: 
+                                            {% with route=order.routes.first %}
+                                                {% if route %}
+                                                    {% if route.date_departure_fact %}
+                                                        {% with duration=route.date_arrival_plan|timeuntil:route.date_departure_fact %}
+                                                            {{ duration }}
+                                                        {% endwith %}
+                                                    {% else %}
+                                                        Расчетное: {{ order.date_arrival_plan|timeuntil:order.date_departure_plan }}
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endwith %}
+                                        </li>
+                                        <li><i class="bi bi-box"></i> Тип груза: Общий</li>
+                                        <li><i class="bi bi-chat"></i> Комментарий: 
+                                            {% if order.comment %}
+                                                {{ order.comment|truncatechars:50 }}
+                                            {% else %}
+                                                Отсутствует
+                                            {% endif %}
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="mt-auto">
+                                    <div class="action-buttons">
+                                        <div class="d-grid gap-2">
+                                            <a href="{% url 'transporter_order_detail' order.id %}" class="btn btn-outline-primary">
+                                                <i class="bi bi-eye"></i> Детали заказа
+                                            </a>
+                                            
+                                            {% if order.status == 'assigned' %}
+                                            <form method="post" action="{% url 'transporter_update_order_status' order.id %}" class="d-grid">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="in_transit">
+                                                <button type="submit" class="btn btn-success">
+                                                    <i class="bi bi-play-circle"></i> Начать доставку
+                                                </button>
+                                            </form>
+                                            {% elif order.status == 'in_transit' %}
+                                            <form method="post" action="{% url 'transporter_update_order_status' order.id %}" class="d-grid">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="delivered">
+                                                <button type="submit" class="btn btn-warning">
+                                                    <i class="bi bi-check-circle"></i> Завершить доставку
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                            
+                                            <a href="#" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#mapModal{{ order.id }}">
+                                                <i class="bi bi-map"></i> Посмотреть на карте
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Модальное окно карты -->
+            <div class="modal fade" id="mapModal{{ order.id }}" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">Маршрут заказа #{{ order.id }}</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="height: 400px; background: #f8f9fa; border-radius: 10px;" 
+                                 class="d-flex flex-column justify-content-center align-items-center">
+                                <i class="bi bi-map display-1 text-muted"></i>
+                                <p class="mt-3">Интеграция с Яндекс.Картами</p>
+                                <small class="text-muted">Для работы нужен API-ключ</small>
+                            </div>
+                            <div class="mt-3">
+                                <h6>Координаты маршрута:</h6>
+                                <ul class="list-unstyled">
+                                    <li><i class="bi bi-geo-alt text-success"></i> Отправление: 
+                                        {{ order.lat_departure|default:"-" }}, {{ order.lon_departure|default:"-" }}
+                                    </li>
+                                    <li><i class="bi bi-geo-alt text-danger"></i> Назначение: 
+                                        {{ order.lat_arrival|default:"-" }}, {{ order.lon_arrival|default:"-" }}
+                                    </li>
+                                    {% with route=order.routes.first %}
+                                        {% if route and route.current_lat and route.current_lon %}
+                                        <li><i class="bi bi-geo-alt text-warning"></i> Текущее положение: 
+                                            {{ route.current_lat|floatformat:4 }}, {{ route.current_lon|floatformat:4 }}
+                                        </li>
+                                        {% endif %}
+                                    {% endwith %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Пагинация -->
+            {% if orders.has_other_pages %}
+            <nav aria-label="Навигация по страницам" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if orders.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ orders.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in orders.paginator.page_range %}
+                        {% if orders.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > orders.number|add:'-3' and num < orders.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if orders.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ orders.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ orders.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <h4 class="mt-4">У вас пока нет активных заказов</h4>
+                <p class="text-muted">Найдите подходящие заказы и начните зарабатывать</p>
+                <div class="mt-4">
+                    <a href="{% url 'transporter_orders_search' %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-search"></i> Найти заказы
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обновление времени в реальном времени
+    function updateTimes() {
+        document.querySelectorAll('.time-ago').forEach(element => {
+            const timestamp = element.getAttribute('data-timestamp');
+            if (timestamp) {
+                const timeDiff = Date.now() - new Date(timestamp).getTime();
+                const minutes = Math.floor(timeDiff / 60000);
+                const hours = Math.floor(minutes / 60);
+                const days = Math.floor(hours / 24);
+                
+                if (days > 0) {
+                    element.textContent = `${days} д. назад`;
+                } else if (hours > 0) {
+                    element.textContent = `${hours} ч. назад`;
+                } else {
+                    element.textContent = `${minutes} мин. назад`;
+                }
+            }
+        });
+    }
+    
+    // Обновляем время каждую минуту
+    updateTimes();
+    setInterval(updateTimes, 60000);
+    
+    // Подтверждение действий
+    document.querySelectorAll('form[action*="update_order_status"]').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('Вы уверены, что хотите изменить статус заказа?')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

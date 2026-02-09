@@ -132,8 +132,15 @@ class Order(models.Model):
     def __str__(self):
         return f"Заказ #{self.id} от {self.sender.name}"
 
+    @property
+    def volume(self):
+        """Рассчитывает объем груза"""
+        if all([self.length, self.width, self.height]):
+            return self.length * self.width * self.height
+        return 0
 
-# 5. Модель Транспортного средства
+
+# Модель Транспортного средства
 class Transport(models.Model):
     class TransportType(models.TextChoices):
         TRUCK = 'truck', 'Грузовик'

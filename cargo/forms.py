@@ -265,56 +265,95 @@ class ProfileSettingsForm(forms.ModelForm):
 
 
 class OrderSearchForm(forms.Form):
-    """Форма поиска заказов для перевозчиков"""
+    """Форма поиска заказов для перевозчика"""
+
+    # Параметры груза
     weight_min = forms.DecimalField(
-        label='Вес от (кг)',
         required=False,
+        min_value=0,
+        max_digits=10,
         decimal_places=2,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        label='Минимальный вес (кг)',
+        widget=forms.NumberInput(attrs={'placeholder': '0'})
     )
     weight_max = forms.DecimalField(
-        label='Вес до (кг)',
         required=False,
+        min_value=0,
+        max_digits=10,
         decimal_places=2,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
-    )
-
-    departure_city = forms.CharField(
-        label='Город отправления',
-        required=False,
-        max_length=100,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
-    )
-
-    arrival_city = forms.CharField(
-        label='Город назначения',
-        required=False,
-        max_length=100,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
-    )
-
-    date_from = forms.DateField(
-        label='Дата с',
-        required=False,
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
-    )
-
-    date_to = forms.DateField(
-        label='Дата по',
-        required=False,
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+        label='Максимальный вес (кг)',
+        widget=forms.NumberInput(attrs={'placeholder': '10000'})
     )
 
     coast_min = forms.DecimalField(
-        label='Стоимость от (руб.)',
         required=False,
+        min_value=0,
+        max_digits=10,
         decimal_places=2,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        label='Минимальная стоимость (₽)',
+        widget=forms.NumberInput(attrs={'placeholder': '0'})
     )
 
-    coast_max = forms.DecimalField(
-        label='Стоимость до (руб.)',
+    # География
+    departure_city = forms.CharField(
         required=False,
-        decimal_places=2,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        max_length=100,
+        label='Город отправления',
+        widget=forms.TextInput(attrs={'placeholder': 'Например, Москва'})
     )
+    arrival_city = forms.CharField(
+        required=False,
+        max_length=100,
+        label='Город назначения',
+        widget=forms.TextInput(attrs={'placeholder': 'Например, Санкт-Петербург'})
+    )
+
+    # Даты
+    date_from = forms.DateField(
+        required=False,
+        label='Дата отправления от',
+        widget=forms.DateInput(attrs={'type': 'date'})
+    )
+    date_to = forms.DateField(
+        required=False,
+        label='Дата отправления до',
+        widget=forms.DateInput(attrs={'type': 'date'})
+    )
+
+    # Сортировка
+    SORT_CHOICES = [
+        ('-date_create', 'Сначала новые'),
+        ('date_create', 'Сначала старые'),
+        ('coast', 'Дешевле'),
+        ('-coast', 'Дороже'),
+        ('weight', 'Легче'),
+        ('-weight', 'Тяжелее'),
+    ]
+    sort_by = forms.ChoiceField(
+        choices=SORT_CHOICES,
+        required=False,
+        initial='-date_create',
+        label='Сортировать по'
+    )
+
+    # Дополнительные параметры
+    auto_match = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Автоподбор под мой транспорт'
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        weight_min = cleaned_data.get('weight_min')
+        weight_max = cleaned_data.get('weight_max')
+
+        if weight_min and weight_max and weight_min > weight_max:
+            raise forms.ValidationError("Минимальный вес не может быть больше максимального")
+
+        date_from = cleaned_data.get('date_from')
+        date_to = cleaned_data.get('date_to')
+        if date_from and date_to and date_from > date_to:
+            raise forms.ValidationError("Дата 'от' не может быть позже даты 'до'")
+
+        return cleaned_data

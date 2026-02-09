@@ -1,0 +1,655 @@
+{% extends 'cargo/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Заказ #{{ order.id }} - CargoService{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .order-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .status-badge {
+            font-size: 1rem;
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+
+        .info-card {
+            border-left: 4px solid;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .info-card.departure {
+            border-left-color: #198754;
+        }
+
+        .info-card.arrival {
+            border-left-color: #dc3545;
+        }
+
+        .info-card.cargo {
+            border-left-color: #0d6efd;
+        }
+
+        .info-card.sender {
+            border-left-color: #fd7e14;
+        }
+
+        .action-buttons .btn {
+            margin-bottom: 5px;
+            width: 100%;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -30px;
+            top: 0;
+            font-size: 1.2rem;
+        }
+
+        .timeline-content {
+            padding-left: 10px;
+        }
+
+        .timeline-item.completed .timeline-content {
+            color: #198754;
+        }
+
+        .map-container {
+            height: 300px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .coords-form .input-group {
+            margin-bottom: 10px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="order-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="bi bi-box-seam"></i> Заказ #{{ order.id }}
+                </h1>
+                <p class="mb-0">
+                    <i class="bi bi-calendar"></i> Создан: {{ order.date_create|date:"d.m.Y H:i" }}
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <h2 class="mb-2">{{ order.coast }} ₽</h2>
+                <span class="status-badge
+                {% if order.status == 'searching' %}bg-warning
+                {% elif order.status == 'assigned' %}bg-info
+                {% elif order.status == 'in_transit' %}bg-primary
+                {% elif order.status == 'delivered' %}bg-success
+                {% else %}bg-secondary{% endif %}">
+                {{ order.get_status_display }}
+            </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Левая колонка - Информация о заказе -->
+        <div class="col-lg-8">
+            <!-- Маршрут -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card info-card departure">
+                        <div class="card-body">
+                            <h5 class="card-title text-success">
+                                <i class="bi bi-geo-alt-fill"></i> Отправление
+                            </h5>
+                            <p class="card-text mb-1">{{ order.address_departure }}</p>
+                            <p class="card-text mb-1">
+                                <small class="text-muted">
+                                    Координаты:
+                                    {% if order.lat_departure and order.lon_departure %}
+                                        {{ order.lat_departure|floatformat:4 }}, {{ order.lon_departure|floatformat:4 }}
+                                    {% else %}
+                                        не указаны
+                                    {% endif %}
+                                </small>
+                            </p>
+                            <p class="card-text mb-0">
+                                <strong>План:</strong> {{ order.date_departure_plan|date:"d.m.Y H:i" }}
+                                {% if route and route.date_departure_fact %}
+                                    <br><strong>Факт:</strong> {{ route.date_departure_fact|date:"d.m.Y H:i" }}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card info-card arrival">
+                        <div class="card-body">
+                            <h5 class="card-title text-danger">
+                                <i class="bi bi-geo-alt-fill"></i> Назначение
+                            </h5>
+                            <p class="card-text mb-1">{{ order.address_arrival }}</p>
+                            <p class="card-text mb-1">
+                                <small class="text-muted">
+                                    Координаты:
+                                    {% if order.lat_arrival and order.lon_arrival %}
+                                        {{ order.lat_arrival|floatformat:4 }}, {{ order.lon_arrival|floatformat:4 }}
+                                    {% else %}
+                                        не указаны
+                                    {% endif %}
+                                </small>
+                            </p>
+                            <p class="card-text mb-0">
+                                <strong>План:</strong> {{ order.date_arrival_plan|date:"d.m.Y H:i" }}
+                                {% if route and route.date_arrival_fact %}
+                                    <br><strong>Факт:</strong> {{ route.date_arrival_fact|date:"d.m.Y H:i" }}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Характеристики груза -->
+            <div class="card info-card cargo mb-4">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">
+                        <i class="bi bi-box"></i> Характеристики груза
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="text-muted small">Вес</div>
+                                <div class="h4 mb-0">{{ order.weight|floatformat:1 }} кг</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="text-muted small">Габариты</div>
+                                <div class="h5 mb-0">{{ order.length|floatformat:1 }}×{{ order.width|floatformat:1 }}×{{ order.height|floatformat:1 }} м</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="text-muted small">Объем</div>
+                                <div class="h4 mb-0">{{ order.volume|floatformat:1 }} м³</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="text-muted small">Тип груза</div>
+                                <div class="h5 mb-0">Общий</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if order.comment %}
+                        <div class="mt-3">
+                            <h6>Комментарий отправителя:</h6>
+                            <div class="alert alert-light">
+                                {{ order.comment }}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Информация об отправителе -->
+            <div class="card info-card sender mb-4">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">
+                        <i class="bi bi-person"></i> Информация об отправителе
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Имя/Название:</th>
+                                    <td>{{ order.sender.name|default:"Не указано" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Телефон:</th>
+                                    <td>
+                                        {% if order.sender.user.phone %}
+                                            {{ order.sender.user.phone }}
+                                        {% else %}
+                                            <span class="text-muted">Не указан</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Email:</th>
+                                    <td>
+                                        {% if order.sender.user.email %}
+                                            {{ order.sender.user.email }}
+                                        {% else %}
+                                            <span class="text-muted">Не указан</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <div class="mb-2">
+                                    <div class="text-muted small">Рейтинг отправителя</div>
+                                    <div class="h3 mb-0">
+                                        {% with sender_rating=order.sender.user.transporter_profile.score %}
+                                            {% if sender_rating %}
+                                                {{ sender_rating|floatformat:1 }}/5.0
+                                            {% else %}
+                                                <span class="text-muted">Нет оценок</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                                {% if feedback %}
+                                    <div class="mt-3">
+                                        <h6>Ваш отзыв об этом заказе:</h6>
+                                        <div class="alert alert-info">
+                                            <div class="d-flex justify-content-between">
+                                                <div>
+                                                    Оценка: {{ feedback.score }}/5.0
+                                                </div>
+                                                <div>
+                                                    {{ feedback.created_at|date:"d.m.Y" }}
+                                                </div>
+                                            </div>
+                                            {% if feedback.text %}
+                                                <div class="mt-2">
+                                                    {{ feedback.text }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Карта и отслеживание -->
+            {% if order.status == 'in_transit' or order.status == 'assigned' %}
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-map"></i> Отслеживание доставки</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="map-container">
+                            <div class="h-100 d-flex flex-column justify-content-center align-items-center">
+                                <i class="bi bi-geo-alt display-1 text-muted"></i>
+                                <p class="mt-3">Карта маршрута</p>
+                                <small class="text-muted">Интеграция с Яндекс.Картами</small>
+                            </div>
+                        </div>
+
+                        {% if route and route.current_lat and route.current_lon %}
+                            <div class="alert alert-info mt-3">
+                                <h6><i class="bi bi-geo"></i> Текущее местоположение</h6>
+                                <p class="mb-1">Широта: {{ route.current_lat|floatformat:4 }}</p>
+                                <p class="mb-0">Долгота: {{ route.current_lon|floatformat:4 }}</p>
+                                <small class="text-muted">
+                                    Обновлено: {{ route.updated_at|date:"d.m.Y H:i" }}
+                                </small>
+                            </div>
+                        {% endif %}
+
+                        {% if order.transporter == user.transporter_profile and order.status == 'in_transit' %}
+                            <div class="mt-3">
+                                <h6>Обновить текущие координаты:</h6>
+                                <form method="post" class="coords-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="update_coords" value="1">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="input-group">
+                                                <span class="input-group-text">Широта</span>
+                                                <input type="text" name="current_lat" class="form-control"
+                                                       placeholder="55.7558" pattern="[0-9\.\-]+" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group">
+                                                <span class="input-group-text">Долгота</span>
+                                                <input type="text" name="current_lon" class="form-control"
+                                                       placeholder="37.6173" pattern="[0-9\.\-]+" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-sm mt-2">
+                                        <i class="bi bi-geo-alt"></i> Обновить координаты
+                                    </button>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Правая колонка - Управление и действия -->
+        <div class="col-lg-4">
+            <!-- Статус заказа -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-diagram-3"></i> Статус заказа</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% with steps=timeline_steps %}
+                            {% for step in steps %}
+                                {% if step == 'Создан' %}
+                                    {% with is_completed=True current_step=1 %}
+                                        <div class="timeline-item completed">
+                                            <div class="timeline-marker">
+                                                <i class="bi bi-check-circle-fill text-success"></i>
+                                            </div>
+                                            <div class="timeline-content">
+                                                <h6 class="mb-0">{{ step }}</h6>
+                                                <small>{{ order.date_create|date:"d.m.Y H:i" }}</small>
+                                            </div>
+                                        </div>
+                                    {% endwith %}
+
+                                {% elif step == 'В поиске перевозчика' %}
+                                    {% if order.status == 'searching' %}
+                                        {% with is_completed=False current_step=2 %}
+                                            <div class="timeline-item">
+                                                <div class="timeline-marker">
+                                                    <i class="bi bi-record-circle text-warning"></i>
+                                                </div>
+                                                <div class="timeline-content">
+                                                    <h6 class="mb-0">{{ step }}</h6>
+                                                    <small>Ожидание перевозчика</small>
+                                                </div>
+                                            </div>
+                                        {% endwith %}
+                                    {% else %}
+                                        {% with is_completed=True %}
+                                            <div class="timeline-item completed">
+                                                <div class="timeline-marker">
+                                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                                </div>
+                                                <div class="timeline-content">
+                                                    <h6 class="mb-0">{{ step }}</h6>
+                                                    <small>Найден перевозчик</small>
+                                                </div>
+                                            </div>
+                                        {% endwith %}
+                                    {% endif %}
+
+                                {% elif step == 'Назначен перевозчик' %}
+                                    {% if order.status == 'assigned' %}
+                                        {% with is_completed=False current_step=3 %}
+                                            <div class="timeline-item">
+                                                <div class="timeline-marker">
+                                                    <i class="bi bi-record-circle text-info"></i>
+                                                </div>
+                                                <div class="timeline-content">
+                                                    <h6 class="mb-0">{{ step }}</h6>
+                                                    <small>Готов к отправке</small>
+                                                </div>
+                                            </div>
+                                        {% endwith %}
+                                    {% elif order.status in 'in_transit delivered' %}
+                                        {% with is_completed=True %}
+                                            <div class="timeline-item completed">
+                                                <div class="timeline-marker">
+                                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                                </div>
+                                                <div class="timeline-content">
+                                                    <h6 class="mb-0">{{ step }}</h6>
+                                                    {% if order.transporter %}
+                                                        <small>{{ order.transporter.name }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endwith %}
+                                    {% endif %}
+
+                                {% elif step == 'Груз в пути' %}
+                                    {% if order.status == 'in_transit' %}
+                                        {% with is_completed=False current_step=4 %}
+                                            <div class="timeline-item">
+                                                <div class="timeline-marker">
+                                                    <i class="bi bi-record-circle text-primary"></i>
+                                                </div>
+                                                <div class="timeline-content">
+                                                    <h6 class="mb-0">{{ step }}</h6>
+                                                    <small>В процессе доставки</small>
+                                                </div>
+                                            </div>
+                                        {% endwith %}
+                                    {% elif order.status == 'delivered' %}
+                                        {% with is_completed=True %}
+                                            <div class="timeline-item completed">
+                                                <div class="timeline-marker">
+                                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                                </div>
+                                                <div class="timeline-content">
+                                                    <h6 class="mb-0">{{ step }}</h6>
+                                                    {% if route and route.date_departure_fact %}
+                                                        <small>Отправлен {{ route.date_departure_fact|date:"d.m.Y" }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endwith %}
+                                    {% endif %}
+
+                                {% elif step == 'Доставлен' %}
+                                    {% if order.status == 'delivered' %}
+                                        {% with is_completed=False current_step=5 %}
+                                            <div class="timeline-item">
+                                                <div class="timeline-marker">
+                                                    <i class="bi bi-record-circle text-success"></i>
+                                                </div>
+                                                <div class="timeline-content">
+                                                    <h6 class="mb-0">{{ step }}</h6>
+                                                    {% if route and route.date_arrival_fact %}
+                                                        <small>Доставлено {{ route.date_arrival_fact|date:"d.m.Y" }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endwith %}
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Действия с заказом -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Управление заказом</h5>
+                </div>
+                <div class="card-body">
+                    <div class="action-buttons">
+                        {% if can_accept %}
+                            <!-- Заказ в поиске перевозчика -->
+                            {% if has_suitable_vehicles %}
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accept_order" value="1">
+                                    <div class="mb-3">
+                                        <label class="form-label">Выберите транспорт:</label>
+                                        <select name="vehicle_id" class="form-select" required>
+                                            <option value="">Выберите транспорт...</option>
+                                            {% for vehicle in suitable_vehicles %}
+                                                <option value="{{ vehicle.id }}">
+                                                    {{ vehicle.get_type_display }} ({{ vehicle.capacity }}
+                                                    кг, {{ vehicle.volume|floatformat:1 }} м³)
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="bi bi-check-lg"></i> Принять заказ
+                                    </button>
+                                </form>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    У вас нет подходящего транспорта для этого заказа.
+                                </div>
+                                <a href="{% url 'transporter_vehicle_add' %}" class="btn btn-warning">
+                                    <i class="bi bi-plus-circle"></i> Добавить транспорт
+                                </a>
+                            {% endif %}
+
+                        {% elif order.transporter == user.transporter_profile %}
+                            <!-- Заказ принадлежит текущему перевозчику -->
+                            {% if order.status == 'assigned' %}
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="update_status" value="1">
+                                    <input type="hidden" name="status" value="in_transit">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-play-circle"></i> Начать доставку
+                                    </button>
+                                </form>
+
+                            {% elif order.status == 'in_transit' %}
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="update_status" value="1">
+                                    <input type="hidden" name="status" value="delivered">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="bi bi-check-circle"></i> Завершить доставку
+                                    </button>
+                                </form>
+
+                            {% elif order.status == 'delivered' %}
+                                <div class="alert alert-success">
+                                    <i class="bi bi-check-circle"></i>
+                                    Заказ успешно доставлен!
+                                </div>
+                                {% if not feedback %}
+                                    <a href="#" class="btn btn-warning">
+                                        <i class="bi bi-star"></i> Оставить отзыв
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+
+                        {% else %}
+                            <!-- Заказ принадлежит другому перевозчику -->
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                Этот заказ уже принят другим перевозчиком.
+                            </div>
+                        {% endif %}
+
+                        <hr>
+
+                        <!-- Общие действия -->
+                        <a href="
+
+                                {% if order.status == 'searching' %}{% url 'transporter_orders_search' %}{% else %}{% url 'transporter_active_orders' %}{% endif %}"
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Назад к списку
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Информация о транспорте -->
+            {% if route and route.transport %}
+                <div class="card shadow">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="bi bi-truck"></i> Используемый транспорт</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <i class="bi bi-truck display-4 text-muted"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-1">{{ route.transport.get_type_display }}</h6>
+                                <p class="small mb-1">Грузоподъемность: {{ route.transport.capacity }} кг</p>
+                                <p class="small mb-0">
+                                    Габариты: {{ route.transport.length|floatformat:1 }}×{{ route.transport.width|floatformat:1 }}×{{ route.transport.height|floatformat:1 }}
+                                    м</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Модальное окно для сообщения о проблеме -->
+    <div class="modal fade" id="reportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Сообщить о проблеме</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="mb-3">
+                            <label class="form-label">Тип проблемы</label>
+                            <select class="form-select">
+                                <option value="">Выберите тип проблемы</option>
+                                <option value="delay">Задержка доставки</option>
+                                <option value="damage">Повреждение груза</option>
+                                <option value="contact">Проблемы со связью</option>
+                                <option value="other">Другое</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Описание проблемы</label>
+                            <textarea class="form-control" rows="4"
+                                      placeholder="Опишите проблему подробно..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Контакт для обратной связи</label>
+                            <input type="text" class="form-control" value="{{ user.phone }}" readonly>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-danger">Отправить сообщение</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+
+        // Автоматическое обновление страницы каждые 30 секунд для заказов в пути
+        {% if order.status == 'in_transit' %}
+            setTimeout(function () {
+                window.location.reload();
+            }, 30000);
+        {% endif %}
+    </script>
+{% endblock %}

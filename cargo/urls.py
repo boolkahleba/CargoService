@@ -5,7 +5,8 @@ from .views.sender_views import sender_dashboard, sender_order_create, sender_or
     sender_order_match, sender_order_track, sender_order_feedback, sender_order_edit, sender_order_cancel
 from .views.transporter_views import transporter_dashboard, transporter_vehicles, transporter_vehicle_add, \
     transporter_order_detail, transporter_orders_search, transporter_routes, transporter_orders_list, \
-    transporter_vehicle_edit, transporter_vehicle_delete
+    transporter_vehicle_edit, transporter_vehicle_delete, transporter_vehicle_toggle, transporter_active_orders, \
+    transporter_update_order_status, transporter_accept_order
 from .views.common_views import profile_settings, notifications_list
 
 urlpatterns = [
@@ -39,6 +40,11 @@ urlpatterns = [
         path('order/<int:order_id>/', transporter_order_detail, name='transporter_order_detail'),
         path('vehicles/<int:vehicle_id>/edit/', transporter_vehicle_edit, name='transporter_vehicle_edit'),
         path('vehicles/<int:vehicle_id>/delete/', transporter_vehicle_delete, name='transporter_vehicle_delete'),
+        path('vehicles/<int:vehicle_id>/toggle/', transporter_vehicle_toggle, name='transporter_vehicle_toggle'),
+        path('orders/active/', transporter_active_orders, name='transporter_active_orders'),
+        path('order/<int:order_id>/update-status/', transporter_update_order_status,
+             name='transporter_update_order_status'),
+        path('order/<int:order_id>/accept/', transporter_accept_order, name='transporter_accept_order'),
     ])),
 
     # Общие страницы профиля
