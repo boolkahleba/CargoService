@@ -1,0 +1,342 @@
+{% extends 'cargo/base.html' %}
+
+{% block title %}Новая заявка (карта) - CargoService{% endblock %}
+
+{% block extra_css %}
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 10px;
+            border: 2px solid #dee2e6;
+        }
+
+        .point-selector {
+            margin-bottom: 20px;
+        }
+
+        .point-selector .btn {
+            margin-right: 10px;
+        }
+
+        .coordinates-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+
+        .map-hint {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0d6efd;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            border-radius: 0 5px 5px 0;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            <strong>Ошибка!</strong> Пожалуйста, исправьте ошибки ниже.
+            {{ form.errors }}
+        </div>
+    {% endif %}
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-map"></i> Создание заявки (выбор на карте)
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="map-hint">
+                        <strong>Инструкция:</strong> Сначала нажмите кнопку "Выбрать точку отправления",
+                        затем кликните на карте. После этого нажмите "Выбрать точку назначения" и кликните на карте.
+                    </div>
+
+                    <!-- Селектор точек -->
+                    <div class="point-selector">
+                        <button type="button" id="selectDeparture" class="btn btn-success">
+                            <i class="bi bi-geo-alt"></i> Выбрать точку отправления
+                        </button>
+                        <button type="button" id="selectArrival" class="btn btn-danger" disabled>
+                            <i class="bi bi-geo-alt-fill"></i> Выбрать точку назначения
+                        </button>
+
+                        <div id="departureCoords" class="coordinates-display" style="display: none;">
+                            <strong>Отправление:</strong> <span id="departureText">не выбрано</span>
+                        </div>
+                        <div id="arrivalCoords" class="coordinates-display" style="display: none;">
+                            <strong>Назначение:</strong> <span id="arrivalText">не выбрано</span>
+                        </div>
+                    </div>
+
+                    <!-- Карта -->
+                    <div id="map"></div>
+
+                    <!-- Форма -->
+                    <form method="post" id="orderForm" novalidate style="margin-top: 20px;">
+                        {% csrf_token %}
+
+                        <!-- Скрытые поля для координат -->
+                        {{ form.lat_departure }}
+                        {{ form.lon_departure }}
+                        {{ form.lat_arrival }}
+                        {{ form.lon_arrival }}
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Длина (м)</label>
+                                    {{ form.length }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Ширина (м)</label>
+                                    {{ form.width }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Высота (м)</label>
+                                    {{ form.height }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Вес (кг)</label>
+                                    {{ form.weight }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Стоимость (₽)</label>
+                                    {{ form.coast }}
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form.date_departure_plan }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.date_arrival_plan }}
+                            </div>
+                        </div>
+
+                        <!-- Остальные поля формы -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>
+                                <i class="bi bi-check-circle"></i> Создать заявку
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Яндекс Карты API -->
+    <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey={{ YANDEX_MAPS_API_KEY }}"
+            type="text/javascript"></script>
+
+    <script>
+        let map;
+        let departureMarker = null;
+        let arrivalMarker = null;
+        let currentSelection = null; // 'departure' или 'arrival'
+        let route = null;
+
+        // Инициализация карты
+        ymaps.ready(init);
+
+        function init() {
+            // Создаем карту с центром на Москве (можно изменить)
+            map = new ymaps.Map('map', {
+                center: [55.751244, 37.618423], // Москва
+                zoom: 10
+            });
+
+            // Обработчики кнопок
+            document.getElementById('selectDeparture').addEventListener('click', function () {
+                currentSelection = 'departure';
+                updateUI();
+            });
+
+            document.getElementById('selectArrival').addEventListener('click', function () {
+                currentSelection = 'arrival';
+                updateUI();
+            });
+
+            // Обработчик клика по карте
+            map.events.add('click', function (e) {
+                if (!currentSelection) return;
+
+                const coords = e.get('coords');
+
+                if (currentSelection === 'departure') {
+                    setDeparture(coords);
+                    document.getElementById('selectArrival').disabled = false;
+                    currentSelection = 'arrival';
+                } else {
+                    setArrival(coords);
+                    document.getElementById('submitBtn').disabled = false;
+                    currentSelection = null;
+                }
+
+                updateUI();
+
+                // Если обе точки выбраны, строим маршрут
+                if (departureMarker && arrivalMarker) {
+                    buildRoute();
+                }
+            });
+
+            updateUI();
+        }
+
+        function setDeparture(coords) {
+            // Удаляем старый маркер
+            if (departureMarker) {
+                map.geoObjects.remove(departureMarker);
+            }
+
+            // Создаем новый маркер
+            departureMarker = new ymaps.Placemark(coords, {
+                balloonContent: 'Точка отправления'
+            }, {
+                preset: 'islands#greenIcon'
+            });
+
+            map.geoObjects.add(departureMarker);
+
+            const lat = parseFloat(coords[0].toFixed(8));
+            const lon = parseFloat(coords[1].toFixed(8));
+
+            // Заполняем поля формы
+            document.getElementById('id_lat_departure').value = lat;
+            document.getElementById('id_lon_departure').value = lon;
+
+            // Показываем координаты
+            document.getElementById('departureCoords').style.display = 'block';
+            document.getElementById('departureText').textContent =
+                lat.toFixed(6) + ', ' + lon.toFixed(6);
+
+            // Получаем адрес по координатам
+            getAddress(coords, 'departure');
+        }
+
+        function setArrival(coords) {
+            if (arrivalMarker) {
+                map.geoObjects.remove(arrivalMarker);
+            }
+
+            arrivalMarker = new ymaps.Placemark(coords, {
+                balloonContent: 'Точка назначения'
+            }, {
+                preset: 'islands#redIcon'
+            });
+
+            map.geoObjects.add(arrivalMarker);
+
+            const lat = parseFloat(coords[0].toFixed(8));
+            const lon = parseFloat(coords[1].toFixed(8));
+
+            document.getElementById('id_lat_arrival').value = lat;
+            document.getElementById('id_lon_arrival').value = lon;
+
+            document.getElementById('arrivalCoords').style.display = 'block';
+            document.getElementById('arrivalText').textContent =
+                lat.toFixed(6) + ', ' + lon.toFixed(6);
+
+            getAddress(coords, 'arrival');
+        }
+
+        function getAddress(coords, type) {
+            // Используем геокодер для получения адреса
+            ymaps.geocode(coords).then(function (res) {
+                const firstGeoObject = res.geoObjects.get(0);
+                if (firstGeoObject) {
+                    const address = firstGeoObject.getAddressLine();
+                    // Можно сохранить адрес в скрытое поле или показать пользователю
+                    console.log(type + ' address:', address);
+                }
+            });
+        }
+
+        function buildRoute() {
+            // Удаляем старый маршрут
+            if (route) {
+                map.geoObjects.remove(route);
+            }
+
+            const departureCoords = departureMarker.geometry.getCoordinates();
+            const arrivalCoords = arrivalMarker.geometry.getCoordinates();
+
+            // Создаем маршрут
+            route = new ymaps.multiRouter.MultiRoute({
+                referencePoints: [
+                    departureCoords,
+                    arrivalCoords
+                ],
+                params: {
+                    routingMode: 'auto'
+                }
+            }, {
+                boundsAutoApply: true
+            });
+
+            map.geoObjects.add(route);
+
+            // Подстраиваем карту под маршрут
+            map.setBounds(route.getBounds(), {
+                checkZoomRange: true
+            });
+        }
+
+        function updateUI() {
+            const depBtn = document.getElementById('selectDeparture');
+            const arrBtn = document.getElementById('selectArrival');
+
+            if (currentSelection === 'departure') {
+                depBtn.classList.remove('btn-success');
+                depBtn.classList.add('btn-outline-success');
+                arrBtn.classList.remove('btn-danger');
+                arrBtn.classList.add('btn-outline-danger');
+            } else if (currentSelection === 'arrival') {
+                depBtn.classList.add('btn-success');
+                depBtn.classList.remove('btn-outline-success');
+                arrBtn.classList.remove('btn-danger');
+                arrBtn.classList.add('btn-outline-danger');
+            } else {
+                depBtn.classList.add('btn-success');
+                depBtn.classList.remove('btn-outline-success');
+                arrBtn.classList.add('btn-danger');
+                arrBtn.classList.remove('btn-outline-danger');
+            }
+        }
+
+        // Валидация формы
+        document.getElementById('orderForm').addEventListener('submit', function (e) {
+            const latDep = document.getElementById('id_lat_departure').value;
+            const lonDep = document.getElementById('id_lon_departure').value;
+            const latArr = document.getElementById('id_lat_arrival').value;
+            const lonArr = document.getElementById('id_lon_arrival').value;
+
+            if (!latDep || !lonDep || !latArr || !lonArr) {
+                e.preventDefault();
+                alert('Пожалуйста, выберите обе точки на карте!');
+                return false;
+            }
+        });
+    </script>
+{% endblock %}

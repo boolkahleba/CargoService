@@ -38,7 +38,30 @@ INSTALLED_APPS = [
     'cargo.apps.CargoConfig',
     'crispy_forms',
     'crispy_bootstrap5',
+    'ckeditor',
+    'ckeditor_uploader',
+    'imagekit',
+    #'editor_ymaps.apps.EditorYmapsConfig',
+    'yandex_maps',
+    'editor_ymaps',
 ]
+YANDEX_MAPS_API_KEY = '3f6f3bc5-c645-4533-abb9-a14f0d4964a1'
+YANDEX_GEOCODER_API_KEY = '3f6f3bc5-c645-4533-abb9-a14f0d4964a1'  # Тот же ключ или отдельный
+
+# Настройки для editor_ymaps (если используете в админке)
+EDITOR_YMAPS_API_VERSION = '2.1'
+EDITOR_YMAPS_LANGUAGE = 'ru_RU'
+EDITOR_YMAPS_API_KEY = YANDEX_MAPS_API_KEY
+
+CKEDITOR_UPLOAD_PATH = "uploads/"
+CKEDITOR_IMAGE_BACKEND = "pillow"
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'full',
+        'height': 300,
+        'width': '100%',
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

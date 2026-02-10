@@ -255,13 +255,13 @@
                                 <div class="col-md-3">
                                     <div class="text-center">
                                         <div class="text-muted small">Вес</div>
-                                        <div class="h5 mb-0">{{ order.weight }} кг</div>
+                                        <div class="h5 mb-0">{{ order.weight|floatformat:1 }} кг</div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="text-center">
                                         <div class="text-muted small">Габариты</div>
-                                        <div class="h6 mb-0">{{ order.length }}×{{ order.width }}×{{ order.height }} м</div>
+                                        <div class="h6 mb-0">{{ order.length|floatformat:1 }}×{{ order.width|floatformat:1 }}×{{ order.height|floatformat:1 }} м</div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">

@@ -357,3 +357,48 @@ class OrderSearchForm(forms.Form):
             raise forms.ValidationError("Дата 'от' не может быть позже даты 'до'")
 
         return cleaned_data
+
+
+class OrderCreateWithMapForm(forms.ModelForm):
+    """Форма создания заказа с выбором точек ТОЛЬКО на карте"""
+
+    # Если используете FloatField в модели, в форме можно не переопределять
+    # Если используете DecimalField с новыми параметрами:
+    lat_departure = forms.DecimalField(
+        max_digits=15,
+        decimal_places=8,
+        widget=forms.HiddenInput(),
+        required=True
+    )
+    lon_departure = forms.DecimalField(
+        max_digits=15,
+        decimal_places=8,
+        widget=forms.HiddenInput(),
+        required=True
+    )
+    lat_arrival = forms.DecimalField(
+        max_digits=15,
+        decimal_places=8,
+        widget=forms.HiddenInput(),
+        required=True
+    )
+    lon_arrival = forms.DecimalField(
+        max_digits=15,
+        decimal_places=8,
+        widget=forms.HiddenInput(),
+        required=True
+    )
+
+    class Meta:
+        model = Order
+        fields = [
+            'weight', 'height', 'width', 'length', 'coast',
+            'date_departure_plan', 'date_arrival_plan',
+            'lat_departure', 'lon_departure',
+            'lat_arrival', 'lon_arrival'
+        ]
+        widgets = {
+            'date_departure_plan': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'date_arrival_plan': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
+

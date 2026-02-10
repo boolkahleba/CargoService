@@ -1,9 +1,10 @@
+import requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db import models
+from django.conf import settings
 from cargo.models import Order, Sender, Route, Feedback
-from cargo.forms import OrderForm, FeedbackForm
+from cargo.forms import OrderForm, FeedbackForm, OrderCreateWithMapForm
 from django.views.decorators.http import require_POST
 
 
@@ -85,7 +86,8 @@ def sender_order_detail(request, order_id):
     context = {
         'order': order,
         'route': route,
-        'volume': volume,  # Добавляем объем в контекст
+        'volume': volume,
+        'YANDEX_MAPS_API_KEY': settings.YANDEX_MAPS_API_KEY,
     }
     return render(request, 'cargo/sender/order_detail.html', context)
 
@@ -232,5 +234,65 @@ def sender_order_cancel(request, order_id):
 
     # Перенаправляем на список заявок
     return redirect('sender_orders_list')
+
+
+@login_required
+def sender_order_create_with_map(request):
+    """Создание заказа с выбором точек на карте"""
+    if not hasattr(request.user, 'sender_profile'):
+        messages.error(request, 'Доступно только для отправителей')
+        return redirect('index')
+
+    if request.method == 'POST':
+        form = OrderCreateWithMapForm(request.POST)
+        if form.is_valid():
+            order = form.save(commit=False)
+            order.sender = request.user.sender_profile
+
+            # Получаем координаты из формы
+            lat_dep = form.cleaned_data.get('lat_departure')
+            lon_dep = form.cleaned_data.get('lon_departure')
+            lat_arr = form.cleaned_data.get('lat_arrival')
+            lon_arr = form.cleaned_data.get('lon_arrival')
+
+            # Функция для получения адреса по координатам
+            def geocode_address(lat, lon):
+                try:
+                    url = "https://geocode-maps.yandex.ru/1.x/"
+                    params = {
+                        'apikey': settings.YANDEX_MAPS_API_KEY,
+                        'geocode': f"{lon},{lat}",
+                        'format': 'json',
+                        'results': 1
+                    }
+                    response = requests.get(url, params=params, timeout=5)
+                    data = response.json()
+
+                    # Извлекаем адрес
+                    try:
+                        address = \
+                        data['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']['metaDataProperty'][
+                            'GeocoderMetaData']['text']
+                        return address
+                    except (KeyError, IndexError):
+                        return f"Координаты: {lat:.6f}, {lon:.6f}"
+                except Exception:
+                    return f"Координаты: {lat:.6f}, {lon:.6f}"
+
+            # Получаем адреса по координатам
+            order.address_departure = geocode_address(lat_dep, lon_dep)
+            order.address_arrival = geocode_address(lat_arr, lon_arr)
+
+            order.save()
+            messages.success(request, 'Заявка создана! Координаты и адреса сохранены.')
+            return redirect('sender_order_detail', order_id=order.id)
+    else:
+        form = OrderCreateWithMapForm()
+
+    context = {
+        'form': form,
+        'YANDEX_MAPS_API_KEY': settings.YANDEX_MAPS_API_KEY
+    }
+    return render(request, 'cargo/sender/order_create_with_map.html', context)
 
 

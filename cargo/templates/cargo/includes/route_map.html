@@ -1,0 +1,78 @@
+{% load static %}
+{% if order.has_coordinates %}
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-map"></i> Маршрут доставки</h5>
+    </div>
+    <div class="card-body p-0">
+        <div id="route-map-{{ order.id }}" 
+             style="height: 400px; width: 100%; border-radius: 0 0 10px 10px;">
+        </div>
+    </div>
+</div>
+
+<script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey={{ YANDEX_MAPS_API_KEY }}" type="text/javascript"></script>
+<script>
+    ymaps.ready(function() {
+        const mapId = 'route-map-{{ order.id }}';
+        const departureCoords = [{{ order.lat_departure }}, {{ order.lon_departure }}];
+        const arrivalCoords = [{{ order.lat_arrival }}, {{ order.lon_arrival }}];
+        
+        // Создаем карту
+        const map = new ymaps.Map(mapId, {
+            center: departureCoords,
+            zoom: 10,
+            controls: ['zoomControl', 'fullscreenControl']
+        });
+        
+        // Добавляем маркеры
+        const departureMarker = new ymaps.Placemark(departureCoords, {
+            balloonContent: '{{ order.address_departure|escapejs }}',
+            iconCaption: 'Отправление'
+        }, {
+            preset: 'islands#greenIcon',
+            iconColor: '#009900'
+        });
+        
+        const arrivalMarker = new ymaps.Placemark(arrivalCoords, {
+            balloonContent: '{{ order.address_arrival|escapejs }}',
+            iconCaption: 'Назначение'
+        }, {
+            preset: 'islands#redIcon',
+            iconColor: '#ff0000'
+        });
+        
+        map.geoObjects.add(departureMarker);
+        map.geoObjects.add(arrivalMarker);
+        
+        // Строим маршрут
+        const multiRoute = new ymaps.multiRouter.MultiRoute({
+            referencePoints: [
+                departureCoords,
+                arrivalCoords
+            ],
+            params: {
+                routingMode: 'auto',
+                results: 1
+            }
+        }, {
+            boundsAutoApply: true,
+            routeActiveStrokeWidth: 6,
+            routeActiveStrokeColor: '#0066ff',
+            routeStrokeStyle: 'solid'
+        });
+        
+        map.geoObjects.add(multiRoute);
+        
+        // Масштабируем карту, чтобы был виден весь маршрут
+        map.setBounds(multiRoute.getBounds(), {
+            checkZoomRange: true,
+            zoomMargin: 50
+        });
+    });
+</script>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> Координаты маршрута не указаны
+</div>
+{% endif %}

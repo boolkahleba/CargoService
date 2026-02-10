@@ -33,12 +33,7 @@
                     <i class="bi bi-map"></i> Отслеживать
                 </a>
             {% endif %}
-
-            {% if order.status == 'delivered' and not order.feedbacks.exists %}
-                <a href="{% url 'sender_order_feedback' order.id %}" class="btn btn-primary">
-                    <i class="bi bi-chat-left-text"></i> Оставить отзыв
-                </a>
-            {% endif %}
+        
         </div>
     </div>
 
@@ -152,6 +147,7 @@
                     </div>
                 </div>
             </div>
+        {% include 'cargo/includes/route_map.html' %}
         </div>
 
         <!-- Боковая панель -->
@@ -185,13 +181,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <strong>Тип:</strong> {{ order.transporter.get_type_display|default:"Не указан" }}
-                        </div>
-
-                        <div class="d-grid">
-                            <button type="button" class="btn btn-outline-primary">
-                                <i class="bi bi-chat-left"></i> Написать сообщение
-                            </button>
+                            <strong>Тип:</strong> {{ order.transporter.get_type_display|default:"Частный перевозчик" }}
                         </div>
                     </div>
                 </div>
@@ -244,56 +234,9 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Быстрые действия -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Действия</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="#" class="btn btn-outline-secondary">
-                            <i class="bi bi-printer"></i> Распечатать накладную
-                        </a>
-                        <a href="#" class="btn btn-outline-secondary">
-                            <i class="bi bi-download"></i> Скачать документы
-                        </a>
-                        <a href="#" class="btn btn-outline-secondary">
-                            <i class="bi bi-share"></i> Поделиться статусом
-                        </a>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- Отзыв (если есть) -->
-    {% if order.feedbacks.exists %}
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Ваш отзыв</h5>
-            </div>
-            <div class="card-body">
-                {% with feedback=order.feedbacks.first %}
-                    <div class="d-flex">
-                        <div class="me-3">
-                            {% for i in "12345" %}
-                                {% if forloop.counter <= feedback.score %}
-                                    <i class="bi bi-star-fill text-warning fs-4"></i>
-                                {% else %}
-                                    <i class="bi bi-star text-warning fs-4"></i>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                        <div>
-                            <p class="mb-0">{{ feedback.text }}</p>
-                            <small class="text-muted">{{ feedback.created_at|date:"d.m.Y H:i" }}</small>
-                        </div>
-                    </div>
-                {% endwith %}
-            </div>
-        </div>
-    {% endif %}
 {% endblock %}
 
 {% block extra_css %}

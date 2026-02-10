@@ -94,24 +94,20 @@ class Order(models.Model):
     )
     # Габариты и стоимость
     weight = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Вес (кг)')
-    height = models.DecimalField(max_digits=6, decimal_places=3, verbose_name='Высота (м)')
-    width = models.DecimalField(max_digits=6, decimal_places=3, verbose_name='Ширина (м)')
-    length = models.DecimalField(max_digits=6, decimal_places=3, verbose_name='Длина (м)')
+    height = models.DecimalField(max_digits=6, decimal_places=2, verbose_name='Высота (м)')
+    width = models.DecimalField(max_digits=6, decimal_places=2, verbose_name='Ширина (м)')
+    length = models.DecimalField(max_digits=6, decimal_places=2, verbose_name='Длина (м)')
     coast = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Стоимость')
 
-    # Адреса в текстовом виде (для отображения на карте их нужно будет геокодировать)
+    # Адреса в текстовом виде
     address_departure = models.CharField(max_length=100, verbose_name='Адрес отправления')
     address_arrival = models.CharField(max_length=100, verbose_name='Адрес назначения')
 
-    # Координаты для карты (опционально, но очень рекомендуется для работы с API)
-    lat_departure = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True,
-                                        verbose_name='Широта отправления')
-    lon_departure = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True,
-                                        verbose_name='Долгота отправления')
-    lat_arrival = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True,
-                                      verbose_name='Широта назначения')
-    lon_arrival = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True,
-                                      verbose_name='Долгота назначения')
+    # Координаты для карты
+    lat_departure = models.FloatField(null=True, blank=True, verbose_name='Широта отправления')
+    lon_departure = models.FloatField(null=True, blank=True, verbose_name='Долгота отправления')
+    lat_arrival = models.FloatField(null=True, blank=True, verbose_name='Широта назначения')
+    lon_arrival = models.FloatField(null=True, blank=True, verbose_name='Долгота назначения')
 
     # Статус и временные метки
     status = models.CharField(
@@ -126,8 +122,29 @@ class Order(models.Model):
     date_departure_fact = models.DateTimeField(null=True, blank=True, verbose_name='Фактическая дата отправки')
     date_arrival_fact = models.DateTimeField(null=True, blank=True, verbose_name='Фактическая дата доставки')
 
+    def get_departure_coords(self):
+        """Возвращает координаты отправления в формате для карты"""
+        if self.lat_departure and self.lon_departure:
+            return f"{self.lat_departure},{self.lon_departure}"
+        return None
+
+    def get_arrival_coords(self):
+        """Возвращает координаты назначения в формате для карты"""
+        if self.lat_arrival and self.lon_arrival:
+            return f"{self.lat_arrival},{self.lon_arrival}"
+        return None
+
+    def has_coordinates(self):
+        """Проверяет, есть ли у заказа координаты"""
+        return all([
+            self.lat_departure, self.lon_departure,
+            self.lat_arrival, self.lon_arrival
+        ])
+
     class Meta:
         ordering = ['-date_create']  # Сортировка по умолчанию: новые сверху
+        verbose_name = 'Заказ'
+        verbose_name_plural = 'Заказы'
 
     def __str__(self):
         return f"Заказ #{self.id} от {self.sender.name}"

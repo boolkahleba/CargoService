@@ -1,7 +1,7 @@
 from django.urls import path, include
 from .views.views import index
 from .views.auth_views import register, custom_login, custom_logout
-from .views.sender_views import sender_dashboard, sender_order_create, sender_orders_list, sender_order_detail, \
+from .views.sender_views import sender_dashboard, sender_order_create_with_map, sender_orders_list, sender_order_detail, \
     sender_order_match, sender_order_track, sender_order_feedback, sender_order_edit, sender_order_cancel
 from .views.transporter_views import transporter_dashboard, transporter_vehicles, transporter_vehicle_add, \
     transporter_order_detail, transporter_orders_search, transporter_routes, transporter_orders_list, \
@@ -19,7 +19,7 @@ urlpatterns = [
     # Личный кабинет отправителя
     path('sender/', include([
         path('dashboard/', sender_dashboard, name='sender_dashboard'),
-        path('order/create/', sender_order_create, name='sender_order_create'),
+        path('sender/order/create/', sender_order_create_with_map, name='sender_order_create'),
         path('orders/', sender_orders_list, name='sender_orders_list'),
         path('order/<int:order_id>/', sender_order_detail, name='sender_order_detail'),
         path('order/<int:order_id>/track/', sender_order_track, name='sender_order_track'),

@@ -4,95 +4,79 @@
 {% block title %}Новый заказ - CargoService{% endblock %}
 
 {% block content %}
-    <div class="row">
-        <div class="col-lg-8 mx-auto">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="bi bi-plus-circle"></i> Создание нового заказа
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <form method="post" id="orderForm">
-                        {% csrf_token %}
-
-                        {% if form.errors %}
-                            <div class="alert alert-danger">
-                                <strong>Пожалуйста, исправьте ошибки:</strong>
-                                <ul class="mb-0">
-                                    {% for field in form %}
-                                        {% if field.errors %}
-                                            <li>{{ field.label }}: {{ field.errors.0 }}</li>
-                                        {% endif %}
-                                    {% endfor %}
-                                    {% for error in form.non_field_errors %}
-                                        <li>{{ error }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-
-                        <h5 class="mb-3">1. Параметры груза</h5>
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                {{ form.weight|as_crispy_field }}
-                            </div>
-                            <div class="col-md-6">
-                                {{ form.coast|as_crispy_field }}
-                            </div>
-                            <div class="col-md-3">
-                                {{ form.length|as_crispy_field }}
-                            </div>
-                            <div class="col-md-3">
-                                {{ form.width|as_crispy_field }}
-                            </div>
-                            <div class="col-md-3">
-                                {{ form.height|as_crispy_field }}
-                            </div>
-                        </div>
-
-                        <h5 class="mb-3">2. Адреса</h5>
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                {{ form.address_departure|as_crispy_field }}
-                            </div>
-                            <div class="col-md-6">
-                                {{ form.address_arrival|as_crispy_field }}
-                            </div>
-                        </div>
-
-                        <h5 class="mb-3">3. Даты</h5>
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                {{ form.date_departure_plan|as_crispy_field }}
-                            </div>
-                            <div class="col-md-6">
-                                {{ form.date_arrival_plan|as_crispy_field }}
-                            </div>
-                        </div>
-
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="{% url 'sender_orders_list' %}" class="btn btn-outline-secondary me-md-2">
-                                Отмена
-                            </a>
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-check-circle"></i> Создать заказ
-                            </button>
-                        </div>
-                    </form>
-                </div>
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-plus-circle"></i> Создание нового заказа
+                </h4>
             </div>
+            <div class="card-body">
+                <form method="post" id="orderForm">
+                    {% csrf_token %}
 
-            <div class="card mt-3">
-                <div class="card-body">
-                    <h6><i class="bi bi-info-circle"></i> Что происходит после создания заказа?</h6>
-                    <ul class="mb-0">
-                        <li>Заказ получит статус "Поиск перевозчика"</li>
-                        <li>Вы сможете отслеживать его в списке своих заказов</li>
-                        <li>Перевозчики увидят ваш заказ в поиске</li>
-                    </ul>
-                </div>
+                    <h5 class="mb-3">1. Параметры груза</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            {{ form.weight|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.coast|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.length|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.width|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.height|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <h5 class="mb-3">2. Адреса</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            {{ form.address_departure|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.address_arrival|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <h5 class="mb-3">3. Даты</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            {{ form.date_departure_plan|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.date_arrival_plan|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'sender_orders_list' %}" class="btn btn-outline-secondary me-md-2">
+                            Отмена
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> Создать заказ
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6><i class="bi bi-info-circle"></i> Что происходит после создания заказа?</h6>
+                <ul class="mb-0">
+                    <li>Заказ получит статус "Поиск перевозчика"</li>
+                    <li>Вы сможете отслеживать его в списке своих заказов</li>
+                    <li>Перевозчики увидят ваш заказ в поиске</li>
+                </ul>
             </div>
         </div>
     </div>
+</div>
 {% endblock %}
