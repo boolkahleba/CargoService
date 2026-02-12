@@ -299,13 +299,6 @@
                                             {% endwith %}
                                         </li>
                                         <li><i class="bi bi-box"></i> Тип груза: Общий</li>
-                                        <li><i class="bi bi-chat"></i> Комментарий: 
-                                            {% if order.comment %}
-                                                {{ order.comment|truncatechars:50 }}
-                                            {% else %}
-                                                Отсутствует
-                                            {% endif %}
-                                        </li>
                                     </ul>
                                 </div>
                                 
@@ -333,10 +326,6 @@
                                                 </button>
                                             </form>
                                             {% endif %}
-                                            
-                                            <a href="#" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#mapModal{{ order.id }}">
-                                                <i class="bi bi-map"></i> Посмотреть на карте
-                                            </a>
                                         </div>
                                     </div>
                                 </div>

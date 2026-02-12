@@ -93,90 +93,6 @@ def sender_order_detail(request, order_id):
 
 
 @login_required
-def sender_order_track(request, order_id):
-    """Отслеживание заказа на карте"""
-    if not hasattr(request.user, 'sender_profile'):
-        messages.error(request, 'Доступно только для отправителей')
-        return redirect('index')
-
-    order = get_object_or_404(Order, id=order_id, sender=request.user.sender_profile)
-    route = Route.objects.filter(order=order).first()
-
-    # Подготавливаем координаты для карты
-    map_data = {
-        'departure': {
-            'lat': order.lat_departure,
-            'lon': order.lon_departure,
-            'address': order.address_departure,
-        },
-        'arrival': {
-            'lat': order.lat_arrival,
-            'lon': order.lon_arrival,
-            'address': order.address_arrival,
-        },
-    }
-
-    if route and route.current_lat and route.current_lon:
-        map_data['current'] = {
-            'lat': route.current_lat,
-            'lon': route.current_lon,
-        }
-
-    context = {
-        'order': order,
-        'map_data': map_data,
-        'yandex_maps_api_key': 'YOUR_YANDEX_MAPS_API_KEY',  # TODO: Добавить в настройки
-    }
-    return render(request, 'cargo/sender/order_track.html', context)
-
-
-@login_required
-def sender_order_match(request, order_id):
-    """Подбор перевозчиков для заказа - ЗАГЛУШКА"""
-    if not hasattr(request.user, 'sender_profile'):
-        messages.error(request, 'Доступно только для отправителей')
-        return redirect('index')
-
-    order = get_object_or_404(Order, id=order_id, sender=request.user.sender_profile)
-
-    # TODO: Реализовать логику подбора перевозчиков
-    context = {
-        'order': order,
-        'message': 'Функция подбора перевозчиков находится в разработке',
-    }
-    return render(request, 'cargo/sender/order_match.html', context)
-
-
-@login_required
-def sender_order_feedback(request, order_id):
-    """Создание отзыва - ЗАГЛУШКА"""
-    if not hasattr(request.user, 'sender_profile'):
-        messages.error(request, 'Доступно только для отправителей')
-        return redirect('index')
-
-    order = get_object_or_404(Order, id=order_id, sender=request.user.sender_profile)
-
-    if request.method == 'POST':
-        form = FeedbackForm(request.POST)
-        if form.is_valid():
-            feedback = form.save(commit=False)
-            feedback.sender = request.user.sender_profile
-            feedback.transporter = order.transporter
-            feedback.order = order
-            feedback.save()
-            messages.success(request, 'Отзыв успешно добавлен!')
-            return redirect('sender_order_detail', order_id=order.id)
-    else:
-        form = FeedbackForm()
-
-    context = {
-        'order': order,
-        'form': form,
-    }
-    return render(request, 'cargo/sender/order_feedback.html', context)
-
-
-@login_required
 def sender_order_edit(request, order_id):
     """Редактирование существующего заказа"""
     if not hasattr(request.user, 'sender_profile'):
@@ -209,7 +125,7 @@ def sender_order_edit(request, order_id):
 
 
 @login_required
-@require_POST  # Разрешаем только POST-запросы для безопасности
+@require_POST
 def sender_order_cancel(request, order_id):
     """Отмена заявки отправителем"""
     if not hasattr(request.user, 'sender_profile'):

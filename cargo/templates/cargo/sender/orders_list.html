@@ -144,20 +144,6 @@
                                                 </button>
                                             </form>
                                         {% endif %}
-
-                                        {% if order.status == 'assigned' or order.status == 'in_transit' %}
-                                            <a href="{% url 'sender_order_track' order.id %}"
-                                               class="btn btn-outline-success" title="Отслеживать">
-                                                <i class="bi bi-map"></i>
-                                            </a>
-                                        {% endif %}
-
-                                        {% if order.status == 'delivered' %}
-                                            <a href="{% url 'sender_order_feedback' order.id %}"
-                                               class="btn btn-outline-primary" title="Оставить отзыв">
-                                                <i class="bi bi-chat-left-text"></i>
-                                            </a>
-                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>

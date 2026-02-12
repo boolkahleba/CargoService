@@ -69,13 +69,6 @@
             Добро пожаловать, {{ user.transporter_profile.name|default:user.username }}!
         </p>
     </div>
-    <div class="text-end">
-        <small class="text-muted d-block">Текущий рейтинг</small>
-        <div class="h4 mb-0">
-            <i class="bi bi-star-fill text-warning"></i>
-            {{ user.transporter_profile.score|default:"0.00" }}/5.00
-        </div>
-    </div>
 </div>
 
 <!-- Карточки статистики -->
@@ -86,7 +79,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="stat-icon">
-                            <i class="bi bi-currency-dollar"></i>
+                            <i class="bi bi-wallet"></i>
                         </div>
                         <h5 class="card-title mt-2">Общий заработок</h5>
                         <h2 class="mb-0">{{ total_earnings|floatformat:0 }} ₽</h2>
@@ -157,7 +150,7 @@
         <div class="card shadow mb-4">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
-                    <i class="bi bi-clock-history text-primary"></i> Активные заказы
+                    Активные заказы
                 </h5>
                 <a href="{% url 'transporter_orders_list' %}" class="btn btn-sm btn-outline-primary">
                     Все заказы <i class="bi bi-arrow-right"></i>
@@ -213,11 +206,6 @@
                                         <a href="{% url 'transporter_order_detail' order.id %}" class="btn btn-outline-info">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        {% if order.status == 'assigned' or order.status == 'in_transit' %}
-                                        <a href="#" class="btn btn-outline-success">
-                                            <i class="bi bi-map"></i>
-                                        </a>
-                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
@@ -240,11 +228,11 @@
         <!-- Быстрые действия -->
         <div class="card shadow">
             <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="bi bi-lightning-charge text-warning"></i> Быстрые действия</h5>
+                <h5 class="mb-0"> Быстрые действия</h5>
             </div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <a href="{% url 'transporter_orders_search' %}" class="card quick-action-btn text-decoration-none">
                             <div class="card-body">
                                 <div class="text-primary mb-2">
@@ -255,25 +243,14 @@
                             </div>
                         </a>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <a href="{% url 'transporter_vehicle_add' %}" class="card quick-action-btn text-decoration-none">
                             <div class="card-body">
                                 <div class="text-success mb-2">
                                     <i class="bi bi-plus-circle display-6"></i>
                                 </div>
                                 <h6 class="card-title">Добавить транспорт</h6>
-                                <p class="small text-muted">Новое ТС в парк</p>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-md-4">
-                        <a href="{% url 'transporter_routes' %}" class="card quick-action-btn text-decoration-none">
-                            <div class="card-body">
-                                <div class="text-info mb-2">
-                                    <i class="bi bi-signpost display-6"></i>
-                                </div>
-                                <h6 class="card-title">Планирование</h6>
-                                <p class="small text-muted">Маршруты и график</p>
+                                <p class="small text-muted">Новое транспортное средство в парк</p>
                             </div>
                         </a>
                     </div>
@@ -329,50 +306,7 @@
                 {% endif %}
             </div>
         </div>
-
-        <!-- Карта активных рейсов -->
-        <div class="card shadow mb-4">
-            <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="bi bi-map text-danger"></i> Активные рейсы на карте</h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="map-container">
-                    <div class="h-100 d-flex flex-column justify-content-center align-items-center">
-                        <i class="bi bi-geo-alt display-1 text-muted"></i>
-                        <p class="mt-3">Интеграция с Яндекс.Картами</p>
-                        <small class="text-muted">Для работы нужен API-ключ</small>
-                    </div>
-                </div>
-            </div>
-            <div class="card-footer bg-light">
-                <small class="text-muted">
-                    <i class="bi bi-info-circle"></i>
-                    Отображаются текущие местоположения ваших активных рейсов
-                </small>
-            </div>
-        </div>
     </div>
 </div>
 
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Простая анимация для графиков
-    const bars = document.querySelectorAll('.chart-bar');
-    bars.forEach(bar => {
-        const height = bar.style.height;
-        bar.style.height = '0%';
-        setTimeout(() => {
-            bar.style.height = height;
-        }, 300);
-    });
-
-    // Обновление данных каждые 30 секунд (заглушка)
-    setInterval(() => {
-        console.log('Обновление данных дашборда...');
-    }, 30000);
-});
-</script>
 {% endblock %}

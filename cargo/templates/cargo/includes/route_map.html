@@ -17,15 +17,13 @@
         const mapId = 'route-map-{{ order.id }}';
         const departureCoords = [{{ order.lat_departure }}, {{ order.lon_departure }}];
         const arrivalCoords = [{{ order.lat_arrival }}, {{ order.lon_arrival }}];
-        
-        // Создаем карту
+
         const map = new ymaps.Map(mapId, {
             center: departureCoords,
             zoom: 10,
             controls: ['zoomControl', 'fullscreenControl']
         });
-        
-        // Добавляем маркеры
+
         const departureMarker = new ymaps.Placemark(departureCoords, {
             balloonContent: '{{ order.address_departure|escapejs }}',
             iconCaption: 'Отправление'
@@ -45,7 +43,6 @@
         map.geoObjects.add(departureMarker);
         map.geoObjects.add(arrivalMarker);
         
-        // Строим маршрут
         const multiRoute = new ymaps.multiRouter.MultiRoute({
             referencePoints: [
                 departureCoords,
@@ -63,8 +60,7 @@
         });
         
         map.geoObjects.add(multiRoute);
-        
-        // Масштабируем карту, чтобы был виден весь маршрут
+
         map.setBounds(multiRoute.getBounds(), {
             checkZoomRange: true,
             zoomMargin: 50

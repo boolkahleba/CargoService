@@ -224,7 +224,7 @@
                         <i class="bi bi-person"></i> Информация об отправителе
                     </h5>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <table class="table table-sm">
                                 <tr>
                                     <th>Имя/Название:</th>
@@ -252,102 +252,13 @@
                                 </tr>
                             </table>
                         </div>
-                        <div class="col-md-6">
-                            <div class="text-center">
-                                <div class="mb-2">
-                                    <div class="text-muted small">Рейтинг отправителя</div>
-                                    <div class="h3 mb-0">
-                                        {% with sender_rating=order.sender.user.transporter_profile.score %}
-                                            {% if sender_rating %}
-                                                {{ sender_rating|floatformat:1 }}/5.0
-                                            {% else %}
-                                                <span class="text-muted">Нет оценок</span>
-                                            {% endif %}
-                                        {% endwith %}
-                                    </div>
-                                </div>
-                                {% if feedback %}
-                                    <div class="mt-3">
-                                        <h6>Ваш отзыв об этом заказе:</h6>
-                                        <div class="alert alert-info">
-                                            <div class="d-flex justify-content-between">
-                                                <div>
-                                                    Оценка: {{ feedback.score }}/5.0
-                                                </div>
-                                                <div>
-                                                    {{ feedback.created_at|date:"d.m.Y" }}
-                                                </div>
-                                            </div>
-                                            {% if feedback.text %}
-                                                <div class="mt-2">
-                                                    {{ feedback.text }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Карта и отслеживание -->
             {% if order.status == 'in_transit' or order.status == 'assigned' %}
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="bi bi-map"></i> Отслеживание доставки</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="map-container">
-                            <div class="h-100 d-flex flex-column justify-content-center align-items-center">
-                                <i class="bi bi-geo-alt display-1 text-muted"></i>
-                                <p class="mt-3">Карта маршрута</p>
-                                <small class="text-muted">Интеграция с Яндекс.Картами</small>
-                            </div>
-                        </div>
-
-                        {% if route and route.current_lat and route.current_lon %}
-                            <div class="alert alert-info mt-3">
-                                <h6><i class="bi bi-geo"></i> Текущее местоположение</h6>
-                                <p class="mb-1">Широта: {{ route.current_lat|floatformat:4 }}</p>
-                                <p class="mb-0">Долгота: {{ route.current_lon|floatformat:4 }}</p>
-                                <small class="text-muted">
-                                    Обновлено: {{ route.updated_at|date:"d.m.Y H:i" }}
-                                </small>
-                            </div>
-                        {% endif %}
-
-                        {% if order.transporter == user.transporter_profile and order.status == 'in_transit' %}
-                            <div class="mt-3">
-                                <h6>Обновить текущие координаты:</h6>
-                                <form method="post" class="coords-form">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="update_coords" value="1">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="input-group">
-                                                <span class="input-group-text">Широта</span>
-                                                <input type="text" name="current_lat" class="form-control"
-                                                       placeholder="55.7558" pattern="[0-9\.\-]+" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="input-group">
-                                                <span class="input-group-text">Долгота</span>
-                                                <input type="text" name="current_lon" class="form-control"
-                                                       placeholder="37.6173" pattern="[0-9\.\-]+" required>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary btn-sm mt-2">
-                                        <i class="bi bi-geo-alt"></i> Обновить координаты
-                                    </button>
-                                </form>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
+                {% include 'cargo/includes/route_map.html' %}
             {% endif %}
         </div>
 

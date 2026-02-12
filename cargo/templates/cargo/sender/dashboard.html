@@ -98,11 +98,6 @@
                                 <a href="{% url 'sender_order_detail' order.id %}" class="btn btn-sm btn-outline-info">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                {% if order.status == 'assigned' or order.status == 'in_transit' %}
-                                <a href="{% url 'sender_order_track' order.id %}" class="btn btn-sm btn-outline-success">
-                                    <i class="bi bi-map"></i>
-                                </a>
-                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}

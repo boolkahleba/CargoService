@@ -8,6 +8,8 @@ from cargo.forms import TransportForm, OrderSearchForm
 from django.db import models
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.conf import settings
+import json
 
 
 @login_required
@@ -109,15 +111,6 @@ def transporter_orders_search(request):
         if coast_min:
             orders = orders.filter(coast__gte=coast_min)
 
-        # Фильтрация по географии
-        departure_city = form.cleaned_data.get('departure_city')
-        arrival_city = form.cleaned_data.get('arrival_city')
-
-        if departure_city:
-            orders = orders.filter(address_departure__icontains=departure_city)
-        if arrival_city:
-            orders = orders.filter(address_arrival__icontains=arrival_city)
-
         # Фильтрация по датам
         date_from = form.cleaned_data.get('date_from')
         date_to = form.cleaned_data.get('date_to')
@@ -176,12 +169,26 @@ def transporter_orders_search(request):
     except EmptyPage:
         orders_page = paginator.page(paginator.num_pages)
 
+    orders_data = []
+    for order in orders:
+        orders_data.append({
+            'id': order.id,
+            'lat_dep': order.lat_departure,
+            'lon_dep': order.lon_departure,
+            'lat_arr': order.lat_arrival,
+            'lon_arr': order.lon_arrival,
+            'address_dep': order.address_departure,
+            'address_arr': order.address_arrival,
+        })
+
     context = {
         'form': form,
         'orders': orders_page,
         'available_vehicles': available_vehicles,
         'search_performed': bool(request.GET),
         'total_found': len(matched_orders),
+        'orders_data_json': json.dumps(orders_data),
+        'YANDEX_MAPS_API_KEY': settings.YANDEX_MAPS_API_KEY,
     }
 
     return render(request, 'cargo/transporter/orders_search.html', context)
@@ -374,6 +381,7 @@ def transporter_order_detail(request, order_id):
         'available_vehicles': available_vehicles,
         'now': timezone.now(),
         'timeline_steps': timeline_steps,
+        'YANDEX_MAPS_API_KEY': settings.YANDEX_MAPS_API_KEY,
     }
 
     return render(request, 'cargo/transporter/order_detail.html', context)

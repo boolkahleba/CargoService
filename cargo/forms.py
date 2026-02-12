@@ -294,19 +294,6 @@ class OrderSearchForm(forms.Form):
         widget=forms.NumberInput(attrs={'placeholder': '0'})
     )
 
-    # География
-    departure_city = forms.CharField(
-        required=False,
-        max_length=100,
-        label='Город отправления',
-        widget=forms.TextInput(attrs={'placeholder': 'Например, Москва'})
-    )
-    arrival_city = forms.CharField(
-        required=False,
-        max_length=100,
-        label='Город назначения',
-        widget=forms.TextInput(attrs={'placeholder': 'Например, Санкт-Петербург'})
-    )
 
     # Даты
     date_from = forms.DateField(
@@ -318,22 +305,6 @@ class OrderSearchForm(forms.Form):
         required=False,
         label='Дата отправления до',
         widget=forms.DateInput(attrs={'type': 'date'})
-    )
-
-    # Сортировка
-    SORT_CHOICES = [
-        ('-date_create', 'Сначала новые'),
-        ('date_create', 'Сначала старые'),
-        ('coast', 'Дешевле'),
-        ('-coast', 'Дороже'),
-        ('weight', 'Легче'),
-        ('-weight', 'Тяжелее'),
-    ]
-    sort_by = forms.ChoiceField(
-        choices=SORT_CHOICES,
-        required=False,
-        initial='-date_create',
-        label='Сортировать по'
     )
 
     # Дополнительные параметры
