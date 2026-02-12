@@ -393,7 +393,6 @@ def transporter_routes(request):
         messages.error(request, 'Доступно только для перевозчиков')
         return redirect('index')
 
-    # TODO: Реализовать логику планирования маршрутов
     context = {
         'message': 'Функция планирования маршрутов находится в разработке',
     }
